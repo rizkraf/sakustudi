@@ -17,3 +17,8 @@ playwright-report/
 # Local tooling
 .tmp/
 .superpowers/
+
+# Template additions
+.DS_Store
+*.tsbuildinfo
+/.react-router/
