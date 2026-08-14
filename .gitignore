@@ -18,6 +18,9 @@ playwright-report/
 .tmp/
 .superpowers/
 
+# Private file storage (local driver writes outside the web root)
+/storage/
+
 # Template additions
 .DS_Store
 *.tsbuildinfo

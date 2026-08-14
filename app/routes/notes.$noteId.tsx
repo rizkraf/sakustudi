@@ -4,6 +4,8 @@ import { useFormStatus } from "react-dom";
 
 import { RichTextEditor } from "~/components/editor/RichTextEditor";
 import { RichTextViewer } from "~/components/editor/RichTextViewer";
+import { AttachmentList } from "~/components/files/AttachmentList";
+import { AttachmentPicker } from "~/components/files/AttachmentPicker";
 import { AppShell } from "~/components/layout/AppShell";
 import { csrfTokenContext, sessionUserContext } from "~/context";
 import {
@@ -23,6 +25,17 @@ import {
 import { parseForm } from "~/lib/validation/form-data";
 import { AppError } from "~/lib/errors/AppError";
 import { listOwnedCourses } from "~/modules/courses/courses.repository";
+import {
+  createAttachment,
+  deleteAttachment,
+  formatBytes,
+  listParentAttachments,
+  maxUploadBytes,
+} from "~/modules/files/files.service";
+import {
+  attachmentDeleteSchema,
+  attachmentUploadSchema,
+} from "~/modules/files/files.schema";
 import { deleteNote, getNote, updateNote } from "~/modules/notes/notes.service";
 import { updateNoteSchema } from "~/modules/notes/notes.schema";
 
@@ -60,11 +73,21 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 
   const editing = new URL(request.url).searchParams.get("edit") === "1";
   const courses = editing ? await listOwnedCourses(user.id) : [];
+  const attachments = (await listParentAttachments(user.id, { kind: "note", id: note.id })).map(
+    (attachment) => ({
+      id: attachment.id,
+      filename: attachment.filename,
+      sizeLabel: formatBytes(attachment.sizeBytes ?? 0),
+      mimeType: attachment.mimeType,
+    }),
+  );
 
   return {
     note,
     editing,
     courses,
+    attachments,
+    maxUploadLabel: formatBytes(maxUploadBytes()),
     csrfToken: context.get(csrfTokenContext) || createCsrfToken(user.id),
     user: { name: user.name ?? undefined, email: user.email },
   };
@@ -89,6 +112,20 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     if (intent === "delete") {
       await deleteNote(user.id, noteId);
       throw redirect("/notes");
+    }
+    if (intent === "attach-file") {
+      const parsed = parseForm(attachmentUploadSchema, formData);
+      if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
+      await createAttachment(user.id, { kind: "note", id: noteId }, parsed.file);
+      // Canonical URL, not request.url: multipart submissions carry a .data
+      // suffix React Router would otherwise follow into a 404 document load.
+      throw redirect(`/notes/${noteId}`);
+    }
+    if (intent === "delete-attachment") {
+      const parsed = parseForm(attachmentDeleteSchema, formData);
+      if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
+      await deleteAttachment(user.id, parsed.attachmentId);
+      throw redirect(`/notes/${noteId}`);
     }
 
     return data<FieldErrorResponse>(
@@ -126,7 +163,8 @@ function FieldError({ field, actionData }: { field: string; actionData?: FieldEr
 
 export default function NoteDetail({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<ActionData>();
-  const { note, editing, courses, csrfToken, user } = loaderData;
+  const { note, editing, courses, attachments, maxUploadLabel, csrfToken, user } =
+    loaderData;
 
   const formError =
     actionData && actionData.formErrors.length > 0
@@ -278,6 +316,23 @@ export default function NoteDetail({ loaderData }: Route.ComponentProps) {
             </section>
           </>
         )}
+
+        <section
+          aria-labelledby="note-files-heading"
+          className="mt-6 rounded-card border border-border bg-surface p-6"
+        >
+          <h2 id="note-files-heading" className="text-sm font-semibold">
+            Files
+          </h2>
+          <AttachmentList items={attachments} csrfToken={csrfToken} />
+          <div className="mt-4 border-t border-border pt-4">
+            <AttachmentPicker
+              csrfToken={csrfToken}
+              errors={actionData}
+              maxUploadLabel={maxUploadLabel}
+            />
+          </div>
+        </section>
       </main>
     </AppShell>
   );

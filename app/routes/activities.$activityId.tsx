@@ -1,5 +1,7 @@
 import { data, redirect, Link, useActionData } from "react-router";
 
+import { AttachmentList } from "~/components/files/AttachmentList";
+import { AttachmentPicker } from "~/components/files/AttachmentPicker";
 import { AppShell } from "~/components/layout/AppShell";
 import { csrfTokenContext, sessionUserContext } from "~/context";
 import {
@@ -24,6 +26,17 @@ import {
 } from "~/lib/time/deadlines";
 import { getActivity, setActivityStatusFromInput } from "~/modules/activities/activities.service";
 import { ACTIVITY_TYPE_LABELS, setActivityStatusSchema } from "~/modules/activities/activities.schema";
+import {
+  createAttachment,
+  deleteAttachment,
+  formatBytes,
+  listParentAttachments,
+  maxUploadBytes,
+} from "~/modules/files/files.service";
+import {
+  attachmentDeleteSchema,
+  attachmentUploadSchema,
+} from "~/modules/files/files.schema";
 
 import type { Route } from "./+types/activities.$activityId";
 
@@ -55,15 +68,26 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     }
     throw error;
   }
+  const attachments = (
+    await listParentAttachments(user.id, { kind: "activity", id: activity.id })
+  ).map((attachment) => ({
+    id: attachment.id,
+    filename: attachment.filename,
+    sizeLabel: formatBytes(attachment.sizeBytes ?? 0),
+    mimeType: attachment.mimeType,
+  }));
+
   return {
     activity,
     now: new Date().toISOString(),
+    attachments,
+    maxUploadLabel: formatBytes(maxUploadBytes()),
     csrfToken: context.get(csrfTokenContext) || createCsrfToken(user.id),
     user: { name: user.name ?? undefined, email: user.email },
   };
 }
 
-export async function action({ request, context }: Route.ActionArgs) {
+export async function action({ request, params, context }: Route.ActionArgs) {
   const user = context.get(sessionUserContext);
   if (!user) throw redirect("/login");
 
@@ -78,6 +102,24 @@ export async function action({ request, context }: Route.ActionArgs) {
       await setActivityStatusFromInput(user.id, parsed);
       throw redirect(request.url);
     }
+    if (intent === "attach-file") {
+      const parsed = parseForm(attachmentUploadSchema, formData);
+      if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
+      await createAttachment(
+        user.id,
+        { kind: "activity", id: params.activityId ?? "" },
+        parsed.file,
+      );
+      // Canonical URL, not request.url: multipart submissions carry a .data
+      // suffix React Router would otherwise follow into a 404 document load.
+      throw redirect(`/activities/${params.activityId ?? ""}`);
+    }
+    if (intent === "delete-attachment") {
+      const parsed = parseForm(attachmentDeleteSchema, formData);
+      if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
+      await deleteAttachment(user.id, parsed.attachmentId);
+      throw redirect(`/activities/${params.activityId ?? ""}`);
+    }
 
     return data<FieldErrorResponse>(
       { ok: false, fieldErrors: {}, formErrors: ["Unknown action."] },
@@ -91,7 +133,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 export default function ActivityDetail({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<ActionData>();
-  const { activity, csrfToken, user } = loaderData;
+  const { activity, attachments, maxUploadLabel, csrfToken, user } = loaderData;
   const state = deriveActivityState(activity, new Date(loaderData.now));
 
   void actionData;
@@ -209,6 +251,23 @@ export default function ActivityDetail({ loaderData }: Route.ComponentProps) {
                 </form>
               </>
             )}
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="activity-files-heading"
+          className="mt-6 rounded-card border border-border bg-surface p-6"
+        >
+          <h2 id="activity-files-heading" className="text-sm font-semibold">
+            Files
+          </h2>
+          <AttachmentList items={attachments} csrfToken={csrfToken} />
+          <div className="mt-4 border-t border-border pt-4">
+            <AttachmentPicker
+              csrfToken={csrfToken}
+              errors={actionData}
+              maxUploadLabel={maxUploadLabel}
+            />
           </div>
         </section>
       </main>

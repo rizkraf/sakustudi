@@ -22,4 +22,5 @@ export default [
   route("notes", "routes/notes._index.tsx"),
   route("notes/new", "routes/notes.new.tsx"),
   route("notes/:noteId", "routes/notes.$noteId.tsx"),
+  route("files/:attachmentId", "routes/files.$attachmentId.tsx"),
 ] satisfies RouteConfig;
