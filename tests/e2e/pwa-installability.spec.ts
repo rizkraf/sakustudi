@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { signInViaApi, uniqueEmail } from "./helpers";
+
 test.describe("PWA installability and mobile shell", () => {
   test.use({ viewport: { width: 400, height: 800 } });
 
@@ -11,8 +13,12 @@ test.describe("PWA installability and mobile shell", () => {
     return page.evaluate(() => getComputedStyle(document.body).color);
   }
 
+  async function openAppAsUser(page: import("@playwright/test").Page) {
+    await signInViaApi(page, uniqueEmail("pwa"));
+  }
+
   test("serves manifest metadata and registers the service worker", async ({ page }) => {
-    await page.goto("/");
+    await openAppAsUser(page);
 
     await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
       "href",
@@ -44,7 +50,7 @@ test.describe("PWA installability and mobile shell", () => {
   });
 
   test("shows a bottom nav without horizontal overflow at 400px", async ({ page }) => {
-    await page.goto("/");
+    await openAppAsUser(page);
 
     const metrics = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
@@ -63,7 +69,7 @@ test.describe("PWA installability and mobile shell", () => {
   });
 
   test("applies light and dark semantic tokens", async ({ page }) => {
-    await page.goto("/");
+    await openAppAsUser(page);
 
     await expect.poll(() => bodyBackgroundColor(page)).toBe("rgb(250, 250, 250)");
     await expect.poll(() => bodyTextColor(page)).toBe("rgb(23, 23, 23)");

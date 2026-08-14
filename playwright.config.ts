@@ -12,9 +12,15 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "npm run build && node server.js",
+    command: "npm run db:migrate && npm run build && node server.js",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    env: {
+      ...process.env,
+      MAIL_ADAPTER: "file",
+      MAIL_FILE_PATH: ".tmp/mail.json",
+      BETTER_AUTH_SECRET: "e2e-test-secret-change-me",
+    },
   },
 });
