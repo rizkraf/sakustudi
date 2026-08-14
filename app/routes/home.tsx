@@ -1,3 +1,4 @@
+import { AppShell } from "~/components/layout/AppShell";
 import { valueFromExpressContext } from "~/context";
 
 import type { Route } from "./+types/home";
@@ -15,5 +16,9 @@ export function loader({ context }: Route.LoaderArgs) {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  return <Welcome message={loaderData.message} />;
+  return (
+    <AppShell activeRoute="/dashboard">
+      <Welcome message={loaderData.message} />
+    </AppShell>
+  );
 }

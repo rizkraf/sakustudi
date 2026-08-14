@@ -1,0 +1,61 @@
+@reference "./app.css";
+
+.rich-text {
+  @apply text-ink leading-relaxed;
+}
+
+.rich-text > * + * {
+  @apply mt-4;
+}
+
+.rich-text h1 {
+  @apply text-2xl font-semibold;
+}
+
+.rich-text h2 {
+  @apply text-xl font-semibold;
+}
+
+.rich-text h3 {
+  @apply text-lg font-semibold;
+}
+
+.rich-text p {
+  @apply text-[15px];
+}
+
+.rich-text ul {
+  @apply list-disc pl-6;
+}
+
+.rich-text ol {
+  @apply list-decimal pl-6;
+}
+
+.rich-text a {
+  @apply text-ink underline decoration-primary decoration-2 underline-offset-2 hover:decoration-primary;
+}
+
+.rich-text blockquote {
+  @apply border-l-2 border-border pl-4 text-muted italic;
+}
+
+.rich-text code {
+  @apply rounded-input bg-canvas px-1.5 py-0.5 font-mono text-sm;
+}
+
+.rich-text pre {
+  @apply overflow-x-auto rounded-card border border-border bg-canvas p-4 font-mono text-sm;
+}
+
+.rich-text pre code {
+  @apply bg-transparent p-0;
+}
+
+.rich-text img {
+  @apply max-w-full rounded-card;
+}
+
+.rich-text hr {
+  @apply border-border;
+}
