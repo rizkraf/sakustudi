@@ -6,7 +6,7 @@
 
 **Architecture:** Use a React Router v7 Framework Mode modular monolith. Route loaders/actions call authenticated domain services, Drizzle persists to PostgreSQL, and a separate BullMQ worker uses Redis for reminder, email, export, and cleanup jobs. PostgreSQL remains source of truth; an outbox protects publication to Redis.
 
-**Tech Stack:** React Router v7, Vite, React, TypeScript, Node.js, PostgreSQL, Drizzle ORM, Better Auth, BullMQ, Redis, Tiptap StarterKit, sanitize-html, Zod, vite-plugin-pwa, Vitest, Playwright, Docker Compose.
+**Tech Stack:** React Router v7, Vite, React, TypeScript, Tailwind CSS v4, Node.js, PostgreSQL, Drizzle ORM, Better Auth, BullMQ, Redis, Tiptap StarterKit, sanitize-html, Zod, vite-plugin-pwa, Vitest, Playwright, Docker Compose.
 
 ## Global Constraints
 
@@ -19,6 +19,7 @@
 - Queue: BullMQ + Redis; PostgreSQL is source of truth.
 - Queue payloads contain IDs and metadata, never note or file contents.
 - Notes: Tiptap WYSIWYG UI, server-side `sanitize-html`, searchable plain text.
+- Styling: Tailwind CSS v4 CSS-first `@theme`; no `tailwind.config.ts` or v3 `@tailwind` directives.
 - Auth: Better Auth database-backed sessions; no custom password hashing.
 - Authorization: derive `userId` from server session; never trust client `userId`.
 - Storage: private local volume by default; S3-compatible storage is optional.
@@ -40,7 +41,7 @@ Create focused files with one responsibility:
 | `app/routes.ts` | React Router route tree and protected route middleware |
 | `app/routes/` | Public, onboarding, academic, privacy, and settings route modules |
 | `app/components/` | App shell, form, feedback, navigation, and domain UI components |
-| `app/styles/` | Doze CSS variables, base styles, rich text styles, responsive layout |
+| `app/styles/` | Tailwind CSS entrypoint, Doze `@theme` tokens, rich text styles, responsive layout |
 | `app/lib/auth/` | Better Auth server/client setup and session helpers |
 | `app/lib/db/` | Drizzle client, schemas, migrations, seed entrypoint |
 | `app/lib/errors/` | Stable application error codes and route response mapping |
@@ -105,7 +106,7 @@ npm install better-auth @better-auth/drizzle-adapter drizzle-orm pg bullmq iored
 - [ ] **Step 3: Install development and test dependencies**
 
 ```bash
-npm install --save-dev typescript @types/node @types/react @types/react-dom @types/pg @types/sanitize-html eslint prettier vitest @vitest/coverage-v8 jsdom @testing-library/react @testing-library/jest-dom @playwright/test tsx
+npm install --save-dev typescript @types/node @types/react @types/react-dom @types/pg @types/sanitize-html eslint prettier vitest @vitest/coverage-v8 jsdom @testing-library/react @testing-library/jest-dom @playwright/test tsx tailwindcss @tailwindcss/vite
 ```
 
 - [ ] **Step 4: Set strict scripts and compiler settings**
@@ -170,10 +171,10 @@ git add package.json package-lock.json tsconfig.json vite.config.ts react-router
 git commit -m "chore: bootstrap React Router application"
 ```
 
-## Task 2: Add Doze UI Foundation and PWA Shell
+## Task 2: Add Tailwind Doze UI Foundation and PWA Shell
 
 **Files:**
-- Create: `app/styles/tokens.css`, `app/styles/base.css`, `app/styles/rich-text.css`
+- Create: `app/styles/app.css`, `app/styles/rich-text.css`
 - Create: `app/components/layout/AppShell.tsx`, `app/components/layout/MobileNav.tsx`, `app/components/layout/DesktopNav.tsx`
 - Create: `app/components/feedback/EmptyState.tsx`, `app/components/feedback/LoadingState.tsx`, `app/components/feedback/ErrorState.tsx`
 - Modify: `app/root.tsx`, `vite.config.ts`
@@ -184,12 +185,29 @@ git commit -m "chore: bootstrap React Router application"
 - `MobileNav({ activeRoute }): JSX.Element` exposes accessible labels for every icon-only item.
 - `ErrorState({ title, message, retryHref }): JSX.Element` renders safe user-facing errors.
 
-- [ ] **Step 1: Define Doze CSS variables**
+- [ ] **Step 1: Configure Tailwind CSS v4 and define Doze theme tokens**
 
-Create light and dark variables for the audited tokens:
+Add the first-party Vite plugin in `vite.config.ts`:
+
+```ts
+import tailwindcss from "@tailwindcss/vite";
+
+export default defineConfig({
+  plugins: [tailwindcss(), reactRouter()],
+});
+```
+
+Create `app/styles/app.css` using CSS-first configuration. Doze tokens must be
+available through semantic Tailwind utilities:
 
 ```css
-:root {
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: Geist, sans-serif;
+  --font-mono: "Geist Mono", monospace;
   --color-primary: #ffce54;
   --color-success: #cbe273;
   --color-danger: #ff6b6b;
@@ -203,15 +221,15 @@ Create light and dark variables for the audited tokens:
   --radius-input: 4px;
   --radius-control: 8px;
   --radius-card: 12px;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --space-8: 32px;
+  --spacing-page: 24px;
 }
 
-[data-theme="dark"] {
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
   --color-canvas: #151515;
   --color-surface: #2a2c2e;
   --color-ink: #fcfcfc;
@@ -219,15 +237,28 @@ Create light and dark variables for the audited tokens:
   --color-border: #374151;
   --color-focus: rgba(255, 206, 84, 0.6);
 }
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply min-h-screen bg-canvas font-sans text-ink antialiased;
+  }
+}
 ```
 
-Use Geist and Geist Mono with self-hosted assets or system fallbacks. Do not
-hardcode new color values in feature components.
+Import `app.css` from `app/root.tsx`. Do not create `tailwind.config.ts`, use
+v3 `@tailwind base/components/utilities`, or hardcode new color values in
+feature components. Use semantic classes such as `bg-canvas`, `bg-surface`,
+`text-ink`, `text-muted`, `border-border`, and `ring-focus`.
 
 - [ ] **Step 2: Implement the responsive shell**
 
-Use 24px mobile gutters, a fixed bottom nav with 44px hit areas, and a desktop
-sidebar/navigation bar. Every icon-only control includes an accessible label.
+Use Tailwind responsive utilities for 24px mobile gutters, a fixed bottom nav
+with 44px hit areas, and a desktop sidebar/navigation bar. Every icon-only
+control includes an accessible label.
 The navigation routes are `/dashboard`, `/academic-terms`, `/calendar`,
 `/notes`, and `/settings/profile`.
 
@@ -246,6 +277,7 @@ runtime cache for authenticated loaders or private files.
 
 Use Vitest to verify navigation labels and route state. Use Playwright at a
 400px-wide viewport to verify no horizontal overflow and visible bottom nav.
+Verify both light and dark semantic token classes.
 
 - [ ] **Step 6: Verify and commit**
 
@@ -254,8 +286,8 @@ npm run typecheck
 npm run lint
 npm test
 npm run build
-git add app/root.tsx app/components app/styles vite.config.ts tests
-git commit -m "feat: add Doze app shell and PWA foundation"
+git add app/root.tsx app/components app/styles vite.config.ts tests package.json package-lock.json
+git commit -m "feat: add Tailwind Doze app shell and PWA foundation"
 ```
 
 ## Task 3: Build PostgreSQL Schema, Migrations, and Seeds
@@ -1075,6 +1107,8 @@ git commit -m "chore: verify MVP pilot readiness"
   outbox, export, deletion, SMTP, and cleanup.
 - Spec coverage: Tasks 12-13 cover PWA operations, CI, backups, legal docs,
   security tests, responsive verification, and release readiness.
+- Styling coverage: Task 2 covers Tailwind CSS v4 Vite integration, Doze
+  `@theme` tokens, class-based dark mode, semantic utilities, and responsive UI.
 - No task depends on client-provided ownership identifiers.
 - No task requires Supabase, billing, AI, or a separate API service.
 - All later interfaces use the same names defined in earlier tasks.

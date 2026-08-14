@@ -56,6 +56,7 @@ The core has no billing, AI, admin dashboard, or direct UT integration.
 | Deployment | Docker Compose, with web, worker, PostgreSQL, and Redis services |
 | API shape | No separate API service; React Router loaders/actions and server handlers |
 | PWA | Installable app shell; offline mutations are out of scope |
+| Styling | Tailwind CSS v4 with CSS-first `@theme` tokens and Vite plugin |
 | UI style | NeedMCP Doze productivity system, adapted for academic workflows |
 
 ## Architecture
@@ -113,6 +114,15 @@ passes through server-side loaders, actions, or handlers.
 React Router actions are server-side mutation handlers. Protected route
 middleware redirects unauthenticated users before loaders execute. Ownership
 checks remain in domain services and are never delegated to the client.
+
+### Styling
+
+Tailwind CSS v4 is integrated through `@tailwindcss/vite`. Doze tokens live in
+the CSS entrypoint through `@theme`, and class-based dark mode uses
+`@custom-variant dark (&:where(.dark, .dark *))`. The project does not use
+`tailwind.config.ts`, v3 `@tailwind` directives, or feature-level hardcoded
+colors. Shared variants use semantic utility classes and focused component
+wrappers.
 
 ### Database
 
@@ -390,7 +400,9 @@ Billing, AI, admin, and support routes do not exist in the MVP route tree.
 ## UI and Accessibility Direction
 
 NeedMCP style `Doze` is the visual foundation. It is adapted from a task
-management theme to academic workflows rather than copied literally.
+management theme to academic workflows rather than copied literally. Tailwind
+CSS v4 maps tokens to semantic utilities such as `bg-canvas`, `bg-surface`,
+`text-ink`, `text-muted`, `border-border`, and `ring-focus`.
 
 ### Tokens
 
@@ -406,6 +418,8 @@ management theme to academic workflows rather than copied literally.
 - Button radius: 8px.
 - Card and modal radius: 12px.
 - Primary spacing units: 4, 8, 12, 16, 24, and 32px.
+- Tailwind theme source: `app/styles/app.css` using `@import "tailwindcss"` and
+  `@theme`.
 
 ### Responsive Layout
 
@@ -594,6 +608,10 @@ The MVP is ready for a pilot when:
   `https://reactrouter.com/start/framework/actions`
   `https://reactrouter.com/how-to/middleware`
   `https://reactrouter.com/start/framework/testing`
+- Tailwind CSS v4 Vite plugin, theme tokens, and dark variant:
+  `https://tailwindcss.com/docs/installation/using-vite`
+  `https://tailwindcss.com/docs/theme`
+  `https://tailwindcss.com/docs/dark-mode`
 - Drizzle PostgreSQL migrations and transactions:
   `https://orm.drizzle.team/docs/migrations`
   `https://orm.drizzle.team/docs/transactions`
