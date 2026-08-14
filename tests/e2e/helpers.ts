@@ -6,9 +6,11 @@ const MAIL_FILE = process.env.MAIL_FILE_PATH ?? ".tmp/mail.json";
 const EMAIL_SUFFIX = "@e2e.test";
 
 export type CapturedMail = {
-  kind: "verification" | "password_reset";
+  kind: "verification" | "password_reset" | "reminder";
   to: string;
-  url: string;
+  url?: string;
+  title?: string;
+  message?: string | null;
 };
 
 export function uniqueEmail(label: string): string {
@@ -66,7 +68,7 @@ export async function signInViaApi(page: Page, email: string, name = "E2E User")
   expect(response.ok()).toBeTruthy();
 
   const verifyMail = await mailFor(email, "verification");
-  const verifyResponse = await page.request.get(verifyMail.url);
+  const verifyResponse = await page.request.get(verifyMail.url!);
   expect(verifyResponse.ok()).toBeTruthy();
 
   await page.goto("/");

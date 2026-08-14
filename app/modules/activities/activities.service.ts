@@ -2,6 +2,14 @@ import { AppError } from "~/lib/errors/AppError";
 import { getDb } from "~/lib/db/client";
 import { parseDeadlineInput } from "~/lib/time/deadlines";
 import { findOwnedCourse } from "~/modules/courses/courses.repository";
+import { insertOutboxEvent } from "~/modules/outbox/outbox.repository";
+import { getReminderEmailEnabled } from "~/modules/reminders/reminders.repository";
+import {
+  cancelReminderScheduleInTx,
+  createReminderScheduleInTx,
+  updateReminderTitles,
+  type ReminderScheduleActivity,
+} from "~/modules/reminders/reminders.service";
 import { zodIssuesToFieldErrors } from "~/modules/shared/zod";
 import {
   canTransitionStatus,
@@ -39,10 +47,25 @@ export {
 
 export { ACTIVITY_TYPES, ACTIVITY_TYPE_LABELS } from "./activities.schema";
 
+function toScheduleActivity(activity: ActivityRow): ReminderScheduleActivity {
+  return {
+    id: activity.id,
+    userId: activity.userId,
+    title: activity.title,
+    dueDate: activity.dueDate,
+    status: activity.status,
+  };
+}
+
 /**
  * Creates an activity for the given user. The course must belong to the
  * user; the activity inherits the course's term so every activity is
  * reachable from its term without trusting a client-supplied termId.
+ *
+ * The activity row, its reminder schedule, and the outbox event are written
+ * in one PostgreSQL transaction. Redis is never touched inside the
+ * transaction: a background publisher enqueues the delivery jobs only after
+ * the commit is durable.
  */
 export async function createActivity(
   userId: string,
@@ -60,14 +83,35 @@ export async function createActivity(
     throw new AppError("NOT_FOUND", "Course not found.");
   }
 
-  return insertActivity(userId, {
-    courseId: course.id,
-    termId: course.termId,
-    title: parsed.data.title,
-    type: parsed.data.type,
-    dueDate: parseDeadlineInput(parsed.data.deadline),
-    details: parsed.data.details ?? null,
-    link: parsed.data.link ?? null,
+  const db = getDb();
+  return db.transaction(async (tx) => {
+    const activity = await insertActivity(
+      userId,
+      {
+        courseId: course.id,
+        termId: course.termId,
+        title: parsed.data.title,
+        type: parsed.data.type,
+        dueDate: parseDeadlineInput(parsed.data.deadline),
+        details: parsed.data.details ?? null,
+        link: parsed.data.link ?? null,
+      },
+      tx,
+    );
+    const emailEnabled = await getReminderEmailEnabled(tx, userId);
+    await createReminderScheduleInTx(
+      tx,
+      userId,
+      toScheduleActivity(activity),
+      emailEnabled,
+    );
+    await insertOutboxEvent(tx, {
+      userId,
+      eventType: "activity.created",
+      eventKey: `activity.created:${activity.id}:${crypto.randomUUID()}`,
+      payload: { activityId: activity.id },
+    });
+    return activity;
   });
 }
 
@@ -75,6 +119,10 @@ export async function createActivity(
  * Updates the editable fields of an owned activity. Status is intentionally
  * out of scope: it has its own command with transition rules. Changing the
  * course moves the activity to that course's term.
+ *
+ * A deadline change reschedules the reminders (old schedule cancelled, new
+ * rows with a bumped deadline version) and writes an outbox event; all of it
+ * happens in one transaction.
  */
 export async function updateActivity(
   userId: string,
@@ -104,26 +152,60 @@ export async function updateActivity(
     termId = course.termId;
   }
 
-  const updated = await updateOwnedActivity(userId, activityId, {
-    title: parsed.data.title ?? existing.title,
-    type: parsed.data.type ?? existing.type,
-    dueDate:
-      parsed.data.deadline !== undefined
-        ? parseDeadlineInput(parsed.data.deadline)
-        : existing.dueDate,
-    details:
-      parsed.data.details !== undefined
-        ? (parsed.data.details ?? null)
-        : existing.details,
-    link:
-      parsed.data.link !== undefined ? (parsed.data.link ?? null) : existing.link,
-    courseId,
-    termId,
+  const newDueDate =
+    parsed.data.deadline !== undefined
+      ? parseDeadlineInput(parsed.data.deadline)
+      : existing.dueDate;
+  const deadlineChanged =
+    newDueDate !== null &&
+    (existing.dueDate === null ||
+      newDueDate.getTime() !== existing.dueDate.getTime());
+
+  const db = getDb();
+  return db.transaction(async (tx) => {
+    const updated = await updateOwnedActivity(
+      userId,
+      activityId,
+      {
+        title: parsed.data.title ?? existing.title,
+        type: parsed.data.type ?? existing.type,
+        dueDate: newDueDate,
+        details:
+          parsed.data.details !== undefined
+            ? (parsed.data.details ?? null)
+            : existing.details,
+        link:
+          parsed.data.link !== undefined ? (parsed.data.link ?? null) : existing.link,
+        courseId,
+        termId,
+      },
+      tx,
+    );
+    if (!updated) {
+      throw new AppError("NOT_FOUND", "Activity not found.");
+    }
+
+    if (deadlineChanged) {
+      await cancelReminderScheduleInTx(tx, activityId);
+      const emailEnabled = await getReminderEmailEnabled(tx, userId);
+      await createReminderScheduleInTx(
+        tx,
+        userId,
+        toScheduleActivity(updated),
+        emailEnabled,
+      );
+      await insertOutboxEvent(tx, {
+        userId,
+        eventType: "activity.updated",
+        eventKey: `activity.updated:${activityId}:${crypto.randomUUID()}`,
+        payload: { activityId },
+      });
+    } else if (parsed.data.title !== undefined) {
+      // Title-only change: refresh the reminder snapshot, nothing to enqueue.
+      await updateReminderTitles(tx, activityId, updated.title);
+    }
+    return updated;
   });
-  if (!updated) {
-    throw new AppError("NOT_FOUND", "Activity not found.");
-  }
-  return updated;
 }
 
 /**
@@ -133,7 +215,9 @@ export async function updateActivity(
  * in_progress clears the completion timestamp. Overdue is never persisted.
  *
  * The row is locked for update so concurrent status changes serialize
- * instead of racing through the transition check.
+ * instead of racing through the transition check. Completing cancels the
+ * reminder schedule; reopening re-schedules it. Both paths write their
+ * outbox event in the same transaction.
  */
 export async function setActivityStatus(
   userId: string,
@@ -172,13 +256,39 @@ export async function setActivityStatus(
         },
       );
     }
-    return saveActivityStatus(
+    const saved = await saveActivityStatus(
       userId,
       activityId,
       status,
       status === "completed" ? new Date() : null,
       tx,
     );
+
+    if (status === "completed") {
+      await cancelReminderScheduleInTx(tx, activityId);
+      await insertOutboxEvent(tx, {
+        userId,
+        eventType: "activity.completed",
+        eventKey: `activity.completed:${activityId}:${crypto.randomUUID()}`,
+        payload: { activityId },
+      });
+    } else if (row.status === "completed") {
+      // Reopened: reminders come back with a fresh deadline version.
+      const emailEnabled = await getReminderEmailEnabled(tx, userId);
+      await createReminderScheduleInTx(
+        tx,
+        userId,
+        toScheduleActivity(saved),
+        emailEnabled,
+      );
+      await insertOutboxEvent(tx, {
+        userId,
+        eventType: "activity.updated",
+        eventKey: `activity.reopened:${activityId}:${crypto.randomUUID()}`,
+        payload: { activityId },
+      });
+    }
+    return saved;
   });
 }
 

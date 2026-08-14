@@ -28,6 +28,9 @@ export default defineConfig({
           name: "integration",
           environment: "node",
           include: ["tests/integration/**/*.integration.test.ts"],
+          // Activity writes now produce outbox/reminder rows; the queue tests
+          // assert on global publish state, so files must not race each other.
+          fileParallelism: false,
         },
       },
     ],

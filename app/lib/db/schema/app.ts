@@ -45,6 +45,7 @@ export const reminderStatus = pgEnum("reminder_status", [
   "scheduled",
   "sent",
   "cancelled",
+  "failed",
 ]);
 export const reminderChannel = pgEnum("reminder_channel", [
   "push",
@@ -423,12 +424,33 @@ export const reminders = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    /**
+     * The activity this reminder was scheduled for. Null for standalone
+     * reminders. Reminder delivery re-checks the activity's state (still
+     * pending, not completed) so stale reminders never fire.
+     */
+    activityId: text("activity_id").references(() => activities.id, {
+      onDelete: "cascade",
+    }),
+    /**
+     * Bumped whenever the activity's deadline changes: reminder jobs carry
+     * (reminderId, deadlineVersion, channel) in their deterministic job id,
+     * so a reschedule never reuses an old job id.
+     */
+    deadlineVersion: integer("deadline_version"),
     title: text("title").notNull(),
     message: text("message"),
     remindAt: timestamp("remind_at", { withTimezone: true }).notNull(),
     status: reminderStatus("status").notNull().default("scheduled"),
     channel: reminderChannel("channel").notNull().default("push"),
     idempotencyKey: text("idempotency_key").notNull().unique(),
+    /** Deterministic BullMQ job id for this reminder, recorded for audit. */
+    jobId: text("job_id"),
+    attempts: integer("attempts").notNull().default(0),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    failedAt: timestamp("failed_at", { withTimezone: true }),
+    /** Set when the user reads the in-app reminder; null until then. */
+    readAt: timestamp("read_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -439,6 +461,7 @@ export const reminders = pgTable(
   (t) => [
     index("reminders_user_idx").on(t.userId),
     index("reminders_due_idx").on(t.remindAt),
+    index("reminders_activity_idx").on(t.activityId),
   ],
 );
 

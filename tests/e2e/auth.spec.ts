@@ -28,7 +28,7 @@ test.describe("auth flows", () => {
     ).toBeVisible();
 
     const mail = await mailFor(email, "verification");
-    await page.goto(mail.url);
+    await page.goto(mail.url!);
 
     await expect(page).toHaveURL("http://localhost:3000/");
     await expect(page.getByText(/SakuStudi/i).first()).toBeVisible();
@@ -39,7 +39,7 @@ test.describe("auth flows", () => {
 
     await registerUser(page, email);
     const mail = await mailFor(email, "verification");
-    await page.goto(mail.url);
+    await page.goto(mail.url!);
     await expect(page).toHaveURL("http://localhost:3000/");
 
     await page.context().clearCookies();
@@ -56,7 +56,7 @@ test.describe("auth flows", () => {
 
     await registerUser(page, email);
     const verifyMail = await mailFor(email, "verification");
-    await page.goto(verifyMail.url);
+    await page.goto(verifyMail.url!);
     await expect(page).toHaveURL("http://localhost:3000/");
     await page.context().clearCookies();
 
@@ -68,7 +68,7 @@ test.describe("auth flows", () => {
     ).toBeVisible();
 
     const resetMail = await mailFor(email, "password_reset");
-    await page.goto(resetMail.url);
+    await page.goto(resetMail.url!);
 
     await page.getByLabel("New password").fill("newpassword456");
     await page.getByRole("button", { name: "Reset password" }).click();
@@ -92,7 +92,7 @@ test.describe("auth flows", () => {
     });
     expect(signup.ok()).toBeTruthy();
     const verifyMail = await mailFor(email, "verification");
-    const verifyResponse = await page.request.get(verifyMail.url);
+    const verifyResponse = await page.request.get(verifyMail.url!);
     expect(verifyResponse.ok()).toBeTruthy();
 
     await page.goto("/");

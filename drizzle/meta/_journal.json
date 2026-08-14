@@ -50,6 +50,13 @@
       "when": 1786733349889,
       "tag": "0006_add-attachment-checksum",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786733854662,
+      "tag": "0007_add-reminder-delivery-columns",
+      "breakpoints": true
     }
   ]
 }

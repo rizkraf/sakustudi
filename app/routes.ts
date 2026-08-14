@@ -23,4 +23,6 @@ export default [
   route("notes/new", "routes/notes.new.tsx"),
   route("notes/:noteId", "routes/notes.$noteId.tsx"),
   route("files/:attachmentId", "routes/files.$attachmentId.tsx"),
+  route("calendar", "routes/calendar.tsx"),
+  route("settings/reminders", "routes/settings.reminders.tsx"),
 ] satisfies RouteConfig;

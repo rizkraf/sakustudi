@@ -98,3 +98,37 @@ if (typeof process !== "undefined" && process.env.MAIL_ADAPTER) {
 export async function sendAuthEmail(input: AuthEmailInput): Promise<void> {
   await activeAdapter.send(input);
 }
+
+export type ReminderEmailInput = {
+  to: string;
+  title: string;
+  message: string | null;
+};
+
+/**
+ * Sends a reminder email through the active adapter. Used by the reminder
+ * worker; the emails queue owns retry policy, so this is a single attempt.
+ */
+export async function sendReminderEmail(
+  input: ReminderEmailInput,
+): Promise<void> {
+  await activeAdapter.send({
+    kind: "reminder",
+    to: input.to,
+    title: input.title,
+    message: input.message,
+  });
+}
+
+/**
+ * Whether a real SMTP transport is configured. The in-memory and file
+ * adapters are test/local-only, so the UI hides the email-reminder toggle
+ * unless the server would actually deliver mail.
+ */
+export function isSmtpCapable(): boolean {
+  const adapter = process.env.MAIL_ADAPTER;
+  if (adapter === "memory" || adapter === "file") {
+    return false;
+  }
+  return Boolean(process.env.SMTP_HOST ?? "localhost");
+}

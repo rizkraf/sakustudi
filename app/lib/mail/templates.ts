@@ -1,8 +1,10 @@
 export type AuthEmailInput = {
-  kind: "verification" | "password_reset";
+  kind: "verification" | "password_reset" | "reminder";
   to: string;
-  url: string;
-  displayName: string | null;
+  url?: string;
+  displayName?: string | null;
+  title?: string;
+  message?: string | null;
 };
 
 export type RenderedAuthEmail = {
@@ -29,21 +31,33 @@ function actionButtonHtml(label: string, url: string): string {
 }
 
 export function renderAuthEmail(input: AuthEmailInput): RenderedAuthEmail {
+  if (input.kind === "reminder") {
+    const title = escapeHtml(input.title ?? "Reminder");
+    const message = input.message ? escapeHtml(input.message) : "";
+    return {
+      subject: `Reminder: ${input.title ?? "Reminder"}`,
+      text: `${input.title ?? "Reminder"}\n\n${message}\n\n— SakuStudi`,
+      html: brandHtml(
+        `<p style="margin:0 0 8px;font-weight:600;">${title}</p><p style="margin:0;">${message}</p>`,
+      ),
+    };
+  }
+
   const name = input.displayName ? ` ${input.displayName}` : "";
 
   if (input.kind === "verification") {
     const bodyHtml = [
       `<p>Hi${escapeHtml(name)},</p>`,
       "<p>Thanks for signing up for SakuStudi. Please confirm your email address to activate your account.</p>",
-      actionButtonHtml("Verify email address", input.url),
+      actionButtonHtml("Verify email address", input.url!),
       "<p>If the button above does not work, copy and paste this link into your browser:</p>",
-      `<p><a href="${escapeHtml(input.url)}" style="color:#b57e00;word-break:break-all;">${escapeHtml(input.url)}</a></p>`,
+      `<p><a href="${escapeHtml(input.url!)}" style="color:#b57e00;word-break:break-all;">${escapeHtml(input.url!)}</a></p>`,
       "<p>If you did not create an account, you can safely ignore this email.</p>",
     ].join("");
 
     return {
       subject: "Verify your email address",
-      text: `Hi${name},\n\nThanks for signing up for SakuStudi. Please confirm your email address to activate your account.\n\nVerify email address: ${input.url}\n\nIf you did not create an account, you can safely ignore this email.`,
+      text: `Hi${name},\n\nThanks for signing up for SakuStudi. Please confirm your email address to activate your account.\n\nVerify email address: ${input.url!}\n\nIf you did not create an account, you can safely ignore this email.`,
       html: brandHtml(bodyHtml),
     };
   }
@@ -51,9 +65,9 @@ export function renderAuthEmail(input: AuthEmailInput): RenderedAuthEmail {
   const bodyHtml = [
     `<p>Hi${escapeHtml(name)},</p>`,
     "<p>We received a request to reset your SakuStudi password. Click the button below to choose a new password. This link expires in 1 hour.</p>",
-    actionButtonHtml("Reset password", input.url),
+    actionButtonHtml("Reset password", input.url!),
     "<p>If the button above does not work, copy and paste this link into your browser:</p>",
-    `<p><a href="${escapeHtml(input.url)}" style="color:#b57e00;word-break:break-all;">${escapeHtml(input.url)}</a></p>`,
+    `<p><a href="${escapeHtml(input.url!)}" style="color:#b57e00;word-break:break-all;">${escapeHtml(input.url!)}</a></p>`,
     "<p>If you did not request a password reset, you can safely ignore this email.</p>",
   ].join("");
 

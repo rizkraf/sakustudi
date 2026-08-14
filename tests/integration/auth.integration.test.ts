@@ -62,7 +62,7 @@ async function createVerifiedUser(
 
   const verifyMail = mailer.messages.find((m) => m.kind === "verification");
   expect(verifyMail).toBeDefined();
-  const token = verifyMail!.url.split("token=")[1]?.split("&")[0];
+  const token = verifyMail!.url!.split("token=")[1]?.split("&")[0];
   expect(token).toBeDefined();
   await auth.api.verifyEmail({ query: { token: token! }, headers: new Headers() });
 
@@ -266,7 +266,7 @@ describe("better auth + legal consent integration", () => {
     expect(resetMail!.to).toBe(email);
     expect(resetMail!.url).toMatch(/\/reset-password\/\S+$/);
 
-    const resetToken = resetMail!.url.split("/reset-password/")[1]?.split("?")[0];
+    const resetToken = resetMail!.url!.split("/reset-password/")[1]?.split("?")[0];
     expect(resetToken).toBeDefined();
 
     await auth.api.resetPassword({

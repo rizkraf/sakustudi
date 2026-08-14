@@ -76,11 +76,29 @@ export async function findOwnedActivity(
   return row;
 }
 
+/**
+ * Activity lookup by id alone, used by the reminder worker's state check
+ * (the reminder row already pins the owner; there is no user input to
+ * scope). A missing row means the activity was deleted — the worker must not
+ * deliver a stale reminder.
+ */
+export async function findActivityForReminder(
+  activityId: string,
+): Promise<ActivityRow | undefined> {
+  const [row] = await db
+    .select()
+    .from(activities)
+    .where(eq(activities.id, activityId))
+    .limit(1);
+  return row;
+}
+
 export async function insertActivity(
   userId: string,
   input: ActivityInsert,
+  tx?: Parameters<Parameters<typeof db.transaction>[0]>[0],
 ): Promise<ActivityRow> {
-  const [row] = await db
+  const [row] = await (tx ?? db)
     .insert(activities)
     .values({
       userId,
@@ -100,8 +118,9 @@ export async function updateOwnedActivity(
   userId: string,
   activityId: string,
   input: ActivityUpdate,
+  tx?: Parameters<Parameters<typeof db.transaction>[0]>[0],
 ): Promise<ActivityRow | undefined> {
-  const [row] = await db
+  const [row] = await (tx ?? db)
     .update(activities)
     .set({ ...input, updatedAt: new Date() })
     .where(and(eq(activities.userId, userId), eq(activities.id, activityId)))
