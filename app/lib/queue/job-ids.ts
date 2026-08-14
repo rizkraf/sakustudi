@@ -36,3 +36,24 @@ export function buildReminderJobId(
 export function buildOutboxJobId(eventId: string): string {
   return `outbox-${eventId}`;
 }
+
+/** Payload of a data-export job. Ids and metadata only. */
+export type ExportJobPayload = {
+  exportId: string;
+  userId: string;
+};
+
+/** Job id for one data-export build. */
+export function buildExportJobId(exportId: string): string {
+  return `export-${exportId}`;
+}
+
+/** Job id for post-deletion storage cleanup of one user. */
+export function buildDeleteUserFilesJobId(userId: string): string {
+  return `delete-files-${userId}`;
+}
+
+/** Payload of a post-deletion file cleanup job: storage keys to remove. */
+export type DeleteUserFilesPayload = {
+  keys: string[];
+};

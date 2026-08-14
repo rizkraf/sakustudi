@@ -15,11 +15,14 @@ import {
 } from "./tasks/reconcile";
 import { runSendEmail } from "./tasks/send-email";
 import { runSendReminder } from "./tasks/send-reminder";
+import { runCreateExport } from "./tasks/create-export";
+import { runDeleteUserFiles } from "./tasks/delete-user-files";
 import { installShutdown } from "./shutdown";
 
 const REMINDERS_CONCURRENCY = 4;
 const EMAILS_CONCURRENCY = 2;
 const CLEANUP_CONCURRENCY = 1;
+const EXPORTS_CONCURRENCY = 2;
 
 /**
  * Storage-orphan cleanup: deletes storage objects whose attachment metadata
@@ -75,12 +78,28 @@ async function main(): Promise<void> {
     { connection, concurrency: CLEANUP_CONCURRENCY },
   );
 
+  const exportsWorker = new Worker(
+    QUEUE_NAMES.exports,
+    (job) => {
+      switch (job.name) {
+        case JOB_NAMES.createExport:
+          return runCreateExport(job);
+        case JOB_NAMES.deleteUserFiles:
+          return runDeleteUserFiles(job);
+        default:
+          throw new Error(`Unknown exports job: ${job.name}`);
+      }
+    },
+    { connection, concurrency: EXPORTS_CONCURRENCY },
+  );
+
   // Failed jobs are logged by id and error class — never payload contents,
   // which may carry user data.
   for (const [queueName, worker] of [
     [QUEUE_NAMES.reminders, remindersWorker],
     [QUEUE_NAMES.emails, emailsWorker],
     [QUEUE_NAMES.cleanup, cleanupWorker],
+    [QUEUE_NAMES.exports, exportsWorker],
   ] as const) {
     worker.on("failed", (job, error) => {
       const name = error instanceof Error ? error.name : String(error);
@@ -101,7 +120,7 @@ async function main(): Promise<void> {
   }
 
   installShutdown({
-    workers: [remindersWorker, emailsWorker, cleanupWorker],
+    workers: [remindersWorker, emailsWorker, cleanupWorker, exportsWorker],
     onClose: closeDb,
   });
 
@@ -152,7 +171,12 @@ async function main(): Promise<void> {
   }
 
   console.log("worker: started", {
-    queues: [QUEUE_NAMES.reminders, QUEUE_NAMES.emails, QUEUE_NAMES.cleanup],
+    queues: [
+      QUEUE_NAMES.reminders,
+      QUEUE_NAMES.emails,
+      QUEUE_NAMES.cleanup,
+      QUEUE_NAMES.exports,
+    ],
   });
 }
 

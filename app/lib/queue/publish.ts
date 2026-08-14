@@ -1,13 +1,17 @@
 import { Queue } from "bullmq";
 
 import { getRedisConnection } from "./connection";
-import { buildOutboxJobId, buildReminderJobId } from "./job-ids";
-import type { ReminderJobPayload } from "./job-ids";
+import {
+  buildExportJobId,
+  buildOutboxJobId,
+  buildReminderJobId,
+} from "./job-ids";
+import type { ExportJobPayload, ReminderJobPayload } from "./job-ids";
 import { JOB_NAMES, QUEUE_NAMES } from "./names";
 import { findOutboxEvent } from "~/modules/outbox/outbox.repository";
 import { findScheduledRemindersForActivity } from "~/modules/reminders/reminders.repository";
 
-export type { ReminderJobPayload } from "./job-ids";
+export type { ExportJobPayload, ReminderJobPayload } from "./job-ids";
 
 const EMAIL_JOB_OPTS = {
   attempts: 3,
@@ -51,6 +55,33 @@ export async function enqueueOutboxEvent(eventId: string): Promise<void> {
   if (event.eventType === "activity.completed") {
     return;
   }
+
+  if (event.eventType === "export.requested") {
+    const exportPayload = event.payload as { exportId?: string };
+    if (typeof exportPayload.exportId !== "string" || !event.userId) {
+      return;
+    }
+    const queue = new Queue(QUEUE_NAMES.exports, {
+      connection: getRedisConnection(),
+    });
+    try {
+      await queue.add(
+        JOB_NAMES.createExport,
+        { exportId: exportPayload.exportId, userId: event.userId } satisfies ExportJobPayload,
+        {
+          jobId: buildExportJobId(exportPayload.exportId),
+          attempts: 3,
+          backoff: { type: "exponential", delay: 5_000 },
+          removeOnComplete: true,
+          removeOnFail: true,
+        },
+      );
+    } finally {
+      await queue.close();
+    }
+    return;
+  }
+
   if (
     event.eventType !== "activity.created" &&
     event.eventType !== "activity.updated"

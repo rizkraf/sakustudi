@@ -25,4 +25,7 @@ export default [
   route("files/:attachmentId", "routes/files.$attachmentId.tsx"),
   route("calendar", "routes/calendar.tsx"),
   route("settings/reminders", "routes/settings.reminders.tsx"),
+  route("settings/profile", "routes/settings.profile.tsx"),
+  route("settings/privacy", "routes/settings.privacy.tsx"),
+  route("exports/:exportId/download", "routes/exports.$exportId.download.ts"),
 ] satisfies RouteConfig;
