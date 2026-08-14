@@ -1,4 +1,6 @@
-export default [
+import tseslint from "typescript-eslint";
+
+export default tseslint.config(
   {
     ignores: [
       "node_modules/**",
@@ -10,15 +12,5 @@ export default [
       "public/**",
     ],
   },
-  {
-    files: ["**/*.{js,mjs,cjs}"],
-    languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-    },
-    rules: {
-      "no-unused-vars": "error",
-      eqeqeq: "error",
-    },
-  },
-];
+  ...tseslint.configs.recommended,
+);
