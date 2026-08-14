@@ -1,17 +1,16 @@
 import type { Job } from "bullmq";
+import { eq } from "drizzle-orm";
 
 import type { ExportJobPayload } from "~/lib/queue/job-ids";
 import {
   buildExportBundle,
   buildExportZip,
-  listUserAttachmentKeys,
   markExportFailed,
   markExportReady,
   storeExportZip,
 } from "~/modules/exports/export.service";
 import { getDb } from "~/lib/db/client";
-import { dataExports } from "~/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { attachments, dataExports } from "~/lib/db/schema";
 import { resolveStorage } from "~/lib/storage/storage";
 
 /**
@@ -42,11 +41,9 @@ export async function runCreateExport(
       .where(eq(dataExports.id, exportId));
 
     const bundle = await buildExportBundle(userId);
-    const keys = await listUserAttachmentKeys(userId);
     const storage = await resolveStorage();
 
-    // Attachment rows carry the display filename; fetch them alongside keys.
-    const { attachments } = await import("~/lib/db/schema");
+    // Attachment rows carry the display filename for the ZIP entries.
     const attachmentRows = await db
       .select({ storageKey: attachments.storageKey, filename: attachments.filename })
       .from(attachments)
@@ -59,7 +56,6 @@ export async function runCreateExport(
     );
     const fileUrl = await storeExportZip(exportId, buffer, checksum);
     await markExportReady(exportId, fileUrl);
-    void keys;
   } catch (error) {
     await markExportFailed(exportId).catch(() => undefined);
     throw error;

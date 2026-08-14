@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: sakustudi
+          POSTGRES_USER: sakustudi
+          POSTGRES_PASSWORD: sakustudi
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U sakustudi -d sakustudi"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://sakustudi:sakustudi@localhost:5432/sakustudi
+      REDIS_URL: redis://localhost:6379
+      BETTER_AUTH_SECRET: ci-secret-that-is-long-enough-0123456789abcdef
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_TRUSTED_ORIGINS: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Migrate and seed
+        run: npm run db:migrate && npm run db:seed
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Integration tests
+        run: npm run test:integration
+
+      - name: Build
+        run: npm run build
+
+      - name: E2E tests
+        run: npm run test:e2e
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+
+      - name: Secret scan
+        run: |
+          if grep -rniE "(api[_-]?key|secret|password|token)\s*[:=]\s*['\"][A-Za-z0-9+/=_-]{16,}['\"]" \
+            --include="*.ts" --include="*.tsx" --include="*.js" --include="*.json" \
+            app worker scripts tests docker docker-compose.yml .env.example; then
+            echo "Possible secret found in source"; exit 1
+          fi
+
+      - name: Docker build
+        run: docker build -t sakustudi:ci .
