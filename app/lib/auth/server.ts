@@ -5,9 +5,20 @@ import { account, session, user, verification } from "~/lib/db/schema";
 import { sendAuthEmail } from "~/lib/mail/mailer";
 
 const DEFAULT_BASE_URL = "http://localhost:3000";
+const KNOWN_DEV_SECRET = "dev-secret-change-me-before-deploy";
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 const BASE_URL = process.env.BETTER_AUTH_URL ?? DEFAULT_BASE_URL;
-const SECRET = process.env.BETTER_AUTH_SECRET ?? "dev-secret-change-me-before-deploy";
+const SECRET =
+  process.env.BETTER_AUTH_SECRET ??
+  (IS_PRODUCTION ? "" : KNOWN_DEV_SECRET);
+
+if (IS_PRODUCTION && (!SECRET || SECRET === KNOWN_DEV_SECRET)) {
+  throw new Error(
+    "BETTER_AUTH_SECRET must be set to a strong random secret in production. " +
+      "Generate one with `openssl rand -base64 32`.",
+  );
+}
 const TRUSTED_ORIGINS = (
   process.env.BETTER_AUTH_TRUSTED_ORIGINS ??
   ""

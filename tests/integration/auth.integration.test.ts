@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { spawnSync } from "node:child_process";
 import { eq, inArray, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { RouterContextProvider } from "react-router";
@@ -11,6 +12,7 @@ import {
   requireConsentsMiddleware,
   requireSessionUser,
   requireUserMiddleware,
+  safeRedirectTarget,
   type SessionUser,
 } from "~/lib/auth/session";
 import { sessionUserContext } from "~/context";
@@ -24,6 +26,7 @@ import {
   recordRequiredConsents,
 } from "~/modules/auth/consent.server";
 import { signUpConsentInputSchema } from "~/modules/auth/consent.schema";
+import { action as termsConsentAction } from "~/routes/legal.terms";
 
 const db = getDb();
 const createdUserIds: string[] = [];
@@ -349,7 +352,7 @@ describe("better auth + legal consent integration", () => {
       headers: new Headers({ Cookie: cookie }),
     }))!.user.id)).toBe(0);
 
-    const request = new Request("http://localhost:3000/", {
+    const request = new Request("http://localhost:3000/notes?tab=1", {
       headers: new Headers({ Cookie: cookie }),
     });
     const context = new RouterContextProvider();
@@ -373,8 +376,77 @@ describe("better auth + legal consent integration", () => {
     expect(redirectResponse).toBeDefined();
     expect(redirectResponse!.status).toBe(302);
     expect(redirectResponse!.headers.get("location")).toBe(
-      "/legal/terms?consent=required",
+      "/legal/terms?consent=required&next=%2Fnotes%3Ftab%3D1",
     );
+  });
+
+  it("re-consents through the terms page and lands back on the intended route", async () => {
+    const email = newEmail();
+    const { userId } = await createVerifiedUser("Re-consent", email);
+    const { cookie } = await signInAndGetCookie(email);
+
+    expect(await countConsentRows(userId)).toBe(0);
+
+    const formData = new FormData();
+    formData.set("acceptTerms", "on");
+    formData.set("acceptPrivacy", "on");
+    formData.set("next", "/notes?tab=1");
+    const request = new Request("http://localhost:3000/legal/terms", {
+      method: "POST",
+      headers: new Headers({ Cookie: cookie }),
+      body: formData,
+    });
+
+    let redirectResponse: Response | undefined;
+    try {
+      await termsConsentAction({ request } as never);
+    } catch (error) {
+      if (error instanceof Response) {
+        redirectResponse = error;
+      } else {
+        throw error;
+      }
+    }
+
+    expect(redirectResponse).toBeDefined();
+    expect(redirectResponse!.status).toBe(302);
+    expect(redirectResponse!.headers.get("location")).toBe("/notes?tab=1");
+
+    const rows = await db
+      .select({ consentType: legalConsents.consentType })
+      .from(legalConsents)
+      .where(eq(legalConsents.userId, userId));
+    expect(rows.map((row) => row.consentType).sort()).toEqual(
+      [...LEGAL_CONSENT_TYPES].sort(),
+    );
+  });
+
+  it("rejects re-consent without accepting both documents", async () => {
+    const email = newEmail();
+    const { userId } = await createVerifiedUser("Partial Re-consent", email);
+    const { cookie } = await signInAndGetCookie(email);
+
+    const formData = new FormData();
+    formData.set("acceptTerms", "on");
+    const request = new Request("http://localhost:3000/legal/terms", {
+      method: "POST",
+      headers: new Headers({ Cookie: cookie }),
+      body: formData,
+    });
+
+    const response = await termsConsentAction({ request } as never);
+    const responseInit = response as unknown as { init?: { status?: number } };
+    expect(responseInit.init?.status).toBe(400);
+    expect(await countConsentRows(userId)).toBe(0);
+  });
+
+  it("sanitizes the re-consent redirect target against open redirects", () => {
+    expect(safeRedirectTarget("/notes")).toBe("/notes");
+    expect(safeRedirectTarget("/")).toBe("/");
+    expect(safeRedirectTarget("https://evil.example/steal")).toBe("/");
+    expect(safeRedirectTarget("//evil.example")).toBe("/");
+    expect(safeRedirectTarget("")).toBe("/");
+    expect(safeRedirectTarget(undefined)).toBe("/");
   });
 
   it("lets protected routes through when consents are present", async () => {
@@ -474,5 +546,51 @@ describe("better auth + legal consent integration", () => {
       .from(session)
       .where(eq(session.userId, userId));
     expect(Number(staleSessionCount[0].count)).toBeGreaterThanOrEqual(1);
+  });
+
+  describe("production secret guard", () => {
+    const BOOT_SCRIPT =
+      "import('./app/lib/auth/server.ts').then(() => process.exit(0)).catch((e) => { console.error(e?.message ?? String(e)); process.exit(1); })";
+
+    function bootAuthInProduction(
+      secret: string | undefined,
+    ): { status: number | null; stderr: string } {
+      const env: Record<string, string> = {
+        ...process.env,
+        NODE_ENV: "production",
+      };
+      if (secret !== undefined) {
+        env.BETTER_AUTH_SECRET = secret;
+      } else {
+        delete env.BETTER_AUTH_SECRET;
+      }
+      const result = spawnSync(
+        process.execPath,
+        ["--import", "tsx", "--input-type=module", "-e", BOOT_SCRIPT],
+        { env, encoding: "utf8", timeout: 60_000 },
+      );
+      return { status: result.status, stderr: result.stderr ?? "" };
+    }
+
+    it("fails to boot in production without a BETTER_AUTH_SECRET", () => {
+      const { status, stderr } = bootAuthInProduction(undefined);
+      expect(status).not.toBe(0);
+      expect(stderr).toContain("BETTER_AUTH_SECRET");
+    });
+
+    it("fails to boot in production with the known placeholder secret", () => {
+      const { status, stderr } = bootAuthInProduction(
+        "dev-secret-change-me-before-deploy",
+      );
+      expect(status).not.toBe(0);
+      expect(stderr).toContain("BETTER_AUTH_SECRET");
+    });
+
+    it("boots in production with a real secret", () => {
+      const { status } = bootAuthInProduction(
+        "a-strong-random-secret-that-is-not-a-placeholder-0123456789",
+      );
+      expect(status).toBe(0);
+    });
   });
 });

@@ -81,4 +81,28 @@ test.describe("auth flows", () => {
 
     await expect(page).toHaveURL("http://localhost:3000/");
   });
+
+  test("re-consents from the terms page after being blocked", async ({ page }) => {
+    const email = uniqueEmail("reconsent");
+
+    // Raw API sign-up (skips the register route) so no consent rows exist.
+    await resetMails();
+    const signup = await page.request.post("/api/auth/sign-up/email", {
+      data: { name: "Re-consent User", email, password: "password123" },
+    });
+    expect(signup.ok()).toBeTruthy();
+    const verifyMail = await mailFor(email, "verification");
+    const verifyResponse = await page.request.get(verifyMail.url);
+    expect(verifyResponse.ok()).toBeTruthy();
+
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/legal\/terms\?consent=required/);
+
+    await page.getByRole("checkbox").nth(0).check();
+    await page.getByRole("checkbox").nth(1).check();
+    await page.getByRole("button", { name: "Accept and continue" }).click();
+
+    await expect(page).toHaveURL("http://localhost:3000/");
+    await expect(page.getByText(/SakuStudi/i).first()).toBeVisible();
+  });
 });

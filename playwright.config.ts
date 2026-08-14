@@ -7,6 +7,9 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   trace: "on-first-retry",
   reporter: process.env.CI ? "github" : "list",
+  // The mail adapter is backed by a single shared file (.tmp/mail.json);
+  // parallel workers would race on it, so specs run serially.
+  workers: 1,
   use: {
     baseURL: "http://localhost:3000",
   },

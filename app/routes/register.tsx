@@ -1,6 +1,9 @@
 import { data, Link, redirect, Form } from "react-router";
 import { APIError } from "better-auth";
+import { eq } from "drizzle-orm";
 import { auth } from "~/lib/auth/server";
+import { getDb } from "~/lib/db/client";
+import { user } from "~/lib/db/schema";
 import { recordRequiredConsents } from "~/modules/auth/consent.server";
 import { signUpConsentInputSchema } from "~/modules/auth/consent.schema";
 
@@ -39,17 +42,38 @@ export async function action({ request }: Route.ActionArgs) {
     );
   }
 
+  let createdUserId: string | null = null;
+  let createdAtMs: number | null = null;
   try {
     const result = await auth.api.signUpEmail({
       body: { name, email, password },
       headers: request.headers,
     });
+    createdUserId = result.user.id;
+    createdAtMs = new Date(result.user.createdAt).getTime();
     await recordRequiredConsents(result.user.id, consent.data);
   } catch (error) {
+    if (
+      createdUserId &&
+      createdAtMs !== null &&
+      Date.now() - createdAtMs < 10_000
+    ) {
+      // A failed consent write must never leave a silent partial sign-up.
+      // Only remove the account when this request actually created it.
+      try {
+        await getDb().delete(user).where(eq(user.id, createdUserId));
+      } catch (cleanupError) {
+        console.error("Failed to clean up partially created account:", cleanupError);
+      }
+    }
     if (error instanceof APIError) {
       return data<ActionData>({ error: error.message }, { status: 400 });
     }
-    throw error;
+    console.error("Sign-up failed:", error);
+    return data<ActionData>(
+      { error: "Sign-up could not be completed. Please try again." },
+      { status: 500 },
+    );
   }
 
   throw redirect("/login?registered=1");

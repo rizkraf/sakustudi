@@ -50,10 +50,12 @@ export const requireUserMiddleware: MiddlewareFunction<Response> = async ({
 
 /**
  * Route middleware that runs after requireUserMiddleware and blocks routes
- * when required legal consent rows are missing.
+ * when required legal consent rows are missing. The redirect keeps the
+ * originally intended destination so the re-consent flow can return the user.
  */
 export const requireConsentsMiddleware: MiddlewareFunction<Response> = async ({
   context,
+  url,
 }) => {
   const user = context.get(sessionUserContext);
   if (!user) {
@@ -61,6 +63,14 @@ export const requireConsentsMiddleware: MiddlewareFunction<Response> = async ({
   }
   const missing = await getMissingConsents(user.id);
   if (missing.length > 0) {
-    throw redirect("/legal/terms?consent=required");
+    const next = url.pathname + url.search;
+    throw redirect(`/legal/terms?consent=required&next=${encodeURIComponent(next)}`);
   }
 };
+
+export function safeRedirectTarget(next: string | null | undefined): string {
+  if (!next || !next.startsWith("/") || next.startsWith("//")) {
+    return "/";
+  }
+  return next;
+}

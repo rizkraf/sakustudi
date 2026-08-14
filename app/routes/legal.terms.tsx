@@ -1,14 +1,46 @@
-import { Link, useSearchParams } from "react-router";
+import { data, Link, redirect, useSearchParams, Form } from "react-router";
+
+import { safeRedirectTarget, requireSessionUser } from "~/lib/auth/session";
+import { recordRequiredConsents } from "~/modules/auth/consent.server";
+import { LEGAL_DOCUMENT_VERSIONS, signUpConsentInputSchema } from "~/modules/auth/consent.schema";
 
 import type { Route } from "./+types/legal.terms";
+
+type ActionData = {
+  error?: string;
+};
 
 export const meta: Route.MetaFunction = () => [
   { title: "Terms of Service | SakuStudi" },
 ];
 
-export default function TermsOfService() {
+export async function action({ request }: Route.ActionArgs) {
+  const formData = await request.formData();
+  const acceptTerms = formData.get("acceptTerms") === "on";
+  const acceptPrivacy = formData.get("acceptPrivacy") === "on";
+  const next = String(formData.get("next") ?? "");
+
+  const user = await requireSessionUser(request);
+
+  const consent = signUpConsentInputSchema.safeParse({
+    acceptTerms,
+    acceptPrivacy,
+  });
+  if (!consent.success) {
+    return data<ActionData>(
+      { error: consent.error.issues[0]?.message ?? "Please accept the required terms." },
+      { status: 400 },
+    );
+  }
+
+  await recordRequiredConsents(user.id, consent.data);
+  throw redirect(safeRedirectTarget(next));
+}
+
+export default function TermsOfService({ actionData }: Route.ComponentProps) {
   const [searchParams] = useSearchParams();
   const consentRequired = searchParams.get("consent") === "required";
+  const next = searchParams.get("next") ?? "/";
 
   return (
     <main className="min-h-screen bg-canvas px-page py-12 text-ink">
@@ -19,13 +51,44 @@ export default function TermsOfService() {
         </p>
 
         {consentRequired && (
-          <p
+          <div
             role="status"
             className="mt-4 rounded-input border border-info/40 bg-info/10 p-3 text-sm"
           >
-            You must accept the Terms of Service and Privacy Policy to continue
-            using SakuStudi.
-          </p>
+            <p>
+              You must accept the Terms of Service and Privacy Policy to
+              continue using SakuStudi.
+            </p>
+            <Form method="post" className="mt-3 space-y-3">
+              <input type="hidden" name="next" value={next} />
+              <label className="flex items-start gap-2">
+                <input name="acceptTerms" type="checkbox" className="mt-1" />
+                <span>
+                  I accept the{" "}
+                  <span className="font-medium">Terms of Service</span> (version{" "}
+                  {LEGAL_DOCUMENT_VERSIONS.terms_of_service}).
+                </span>
+              </label>
+              <label className="flex items-start gap-2">
+                <input name="acceptPrivacy" type="checkbox" className="mt-1" />
+                <span>
+                  I accept the{" "}
+                  <span className="font-medium">Privacy Policy</span>.
+                </span>
+              </label>
+              {actionData?.error && (
+                <p role="alert" className="text-sm text-danger">
+                  {actionData.error}
+                </p>
+              )}
+              <button
+                type="submit"
+                className="rounded-input bg-primary px-4 py-2 text-sm font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              >
+                Accept and continue
+              </button>
+            </Form>
+          </div>
         )}
 
         <div className="mt-6 space-y-4 text-sm leading-relaxed">
