@@ -9,8 +9,15 @@ import {
   onboardingTermSchema,
   SKIP_PROGRAM_VALUE,
 } from "~/modules/onboarding/onboarding.schema";
-import { requireConsentsMiddleware, requireUserMiddleware } from "~/lib/auth/session";
-import { isFieldErrorResponse, type FieldErrorResponse } from "~/lib/errors/response";
+import {
+  requireConsentsMiddleware,
+  requireUserMiddleware,
+} from "~/lib/auth/session";
+import {
+  isFieldErrorResponse,
+  toFormActionResponse,
+  type FieldErrorResponse,
+} from "~/lib/errors/response";
 import {
   assertCsrfMutation,
   createCsrfToken,
@@ -78,13 +85,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const programs = await listActiveStudyPrograms(user.id);
 
-  let step = Math.min(Math.max(Number(url.searchParams.get("step") ?? "1") || 1, 1), 3);
+  let step = Math.min(
+    Math.max(Number(url.searchParams.get("step") ?? "1") || 1, 1),
+    3,
+  );
   let programId = url.searchParams.get("programId") ?? undefined;
   let termId = url.searchParams.get("termId") ?? undefined;
 
   const programIsValid =
     programId !== undefined &&
-    (programId === SKIP_PROGRAM_VALUE || programs.some((p) => p.id === programId));
+    (programId === SKIP_PROGRAM_VALUE ||
+      programs.some((p) => p.id === programId));
 
   if (!programIsValid) {
     programId = undefined;
@@ -155,88 +166,96 @@ export async function action({ request, context }: Route.ActionArgs) {
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
 
-  if (intent === "program") {
-    const parsed = parseForm(onboardingProgramSchema, formData);
-    if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
+  try {
+    if (intent === "program") {
+      const parsed = parseForm(onboardingProgramSchema, formData);
+      if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
 
-    const programId = parsed.programId;
-    if (programId !== SKIP_PROGRAM_VALUE) {
-      const programs = await listActiveStudyPrograms(user.id);
-      if (!programs.some((p) => p.id === programId)) {
+      const programId = parsed.programId;
+      if (programId !== SKIP_PROGRAM_VALUE) {
+        const programs = await listActiveStudyPrograms(user.id);
+        if (!programs.some((p) => p.id === programId)) {
+          return data<FieldErrorResponse>(
+            {
+              ok: false,
+              fieldErrors: { programId: ["Choose a valid study program."] },
+              formErrors: [],
+            },
+            { status: 400 },
+          );
+        }
+      }
+      throw redirect(
+        `/onboarding?step=2&programId=${encodeURIComponent(programId)}`,
+      );
+    }
+
+    if (intent === "term") {
+      const parsed = parseForm(onboardingTermSchema, formData);
+      if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
+
+      const programId = String(formData.get("programId") ?? "");
+
+      let term: AcademicTermRow;
+      const existing = await findActiveTerm(user.id);
+      if (existing) {
+        term = existing;
+      } else {
+        try {
+          term = await createAcademicTerm(user.id, parsed);
+        } catch (error) {
+          const resumed = await findActiveTerm(user.id);
+          if (!resumed) throw error;
+          term = resumed;
+        }
+      }
+
+      const params = new URLSearchParams();
+      if (programId !== "") params.set("programId", programId);
+      params.set("termId", term.id);
+      throw redirect(`/onboarding?step=3&${params}`);
+    }
+
+    if (intent === "courses") {
+      const parsed = parseForm(onboardingCoursesSchema, formData);
+      if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
+
+      const termId = String(formData.get("termId") ?? "");
+      const term = await findOwnedTerm(user.id, termId);
+      if (!term) {
         return data<FieldErrorResponse>(
           {
             ok: false,
-            fieldErrors: { programId: ["Choose a valid study program."] },
-            formErrors: [],
+            fieldErrors: {},
+            formErrors: ["Your term was not found. Please start again."],
           },
           { status: 400 },
         );
       }
-    }
-    throw redirect(`/onboarding?step=2&programId=${encodeURIComponent(programId)}`);
-  }
 
-  if (intent === "term") {
-    const parsed = parseForm(onboardingTermSchema, formData);
-    if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
-
-    const programId = String(formData.get("programId") ?? "");
-
-    let term: AcademicTermRow;
-    const existing = await findActiveTerm(user.id);
-    if (existing) {
-      term = existing;
-    } else {
-      try {
-        term = await createAcademicTerm(user.id, parsed);
-      } catch (error) {
-        const resumed = await findActiveTerm(user.id);
-        if (!resumed) throw error;
-        term = resumed;
+      for (const catalogCourseId of parsed.courseIds) {
+        await createCourseFromCatalog(user.id, term.id, catalogCourseId);
       }
+      if (parsed.customName !== undefined) {
+        await createCustomCourse(user.id, term.id, {
+          name: parsed.customName,
+          code: parsed.customCode,
+        });
+      }
+
+      await completeOnboarding(user.id);
+      throw redirect("/dashboard");
     }
 
-    const params = new URLSearchParams();
-    if (programId !== "") params.set("programId", programId);
-    params.set("termId", term.id);
-    throw redirect(`/onboarding?step=3&${params}`);
+    return data<FieldErrorResponse>(
+      { ok: false, fieldErrors: {}, formErrors: ["Unknown onboarding step."] },
+      { status: 400 },
+    );
+  } catch (error) {
+    // redirect() throws a Response; never convert it into an error body.
+    if (error instanceof Response) throw error;
+    return toFormActionResponse(error);
   }
-
-  if (intent === "courses") {
-    const parsed = parseForm(onboardingCoursesSchema, formData);
-    if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
-
-    const termId = String(formData.get("termId") ?? "");
-    const term = await findOwnedTerm(user.id, termId);
-    if (!term) {
-      return data<FieldErrorResponse>(
-        {
-          ok: false,
-          fieldErrors: {},
-          formErrors: ["Your term was not found. Please start again."],
-        },
-        { status: 400 },
-      );
-    }
-
-    for (const catalogCourseId of parsed.courseIds) {
-      await createCourseFromCatalog(user.id, term.id, catalogCourseId);
-    }
-    if (parsed.customName !== undefined) {
-      await createCustomCourse(user.id, term.id, {
-        name: parsed.customName,
-        code: parsed.customCode,
-      });
-    }
-
-    await completeOnboarding(user.id);
-    throw redirect("/dashboard");
-  }
-
-  return data<FieldErrorResponse>(
-    { ok: false, fieldErrors: {}, formErrors: ["Unknown onboarding step."] },
-    { status: 400 },
-  );
 }
 
 function FieldError({
@@ -257,8 +276,16 @@ function FieldError({
 
 export default function Onboarding({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<ActionData>();
-  const { step, programId, termId, programs, activeTerm, catalogCourses, csrfToken, defaults } =
-    loaderData;
+  const {
+    step,
+    programId,
+    termId,
+    programs,
+    activeTerm,
+    catalogCourses,
+    csrfToken,
+    defaults,
+  } = loaderData;
   const formError =
     actionData && actionData.formErrors.length > 0
       ? actionData.formErrors[0]
@@ -311,8 +338,12 @@ export default function Onboarding({ loaderData }: Route.ComponentProps) {
                       className="mt-1 size-4"
                     />
                     <span className="min-w-0 text-sm">
-                      <span className="font-medium text-ink">{program.name}</span>{" "}
-                      <span className="text-xs text-muted">({program.code})</span>
+                      <span className="font-medium text-ink">
+                        {program.name}
+                      </span>{" "}
+                      <span className="text-xs text-muted">
+                        ({program.code})
+                      </span>
                       {program.description && (
                         <span className="mt-0.5 block text-xs text-muted">
                           {program.description}
@@ -356,7 +387,9 @@ export default function Onboarding({ loaderData }: Route.ComponentProps) {
                   type="text"
                   required
                   defaultValue={defaults.termName}
-                  aria-invalid={fieldErrorsFor(actionData, "name") ? true : undefined}
+                  aria-invalid={
+                    fieldErrorsFor(actionData, "name") ? true : undefined
+                  }
                   className="mt-1 w-full rounded-input border border-border bg-canvas px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                 />
                 <FieldError field="name" actionData={actionData} />
@@ -369,7 +402,9 @@ export default function Onboarding({ loaderData }: Route.ComponentProps) {
                     type="date"
                     required
                     defaultValue={defaults.startDate}
-                    aria-invalid={fieldErrorsFor(actionData, "startDate") ? true : undefined}
+                    aria-invalid={
+                      fieldErrorsFor(actionData, "startDate") ? true : undefined
+                    }
                     className="mt-1 w-full rounded-input border border-border bg-canvas px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   />
                   <FieldError field="startDate" actionData={actionData} />
@@ -381,7 +416,9 @@ export default function Onboarding({ loaderData }: Route.ComponentProps) {
                     type="date"
                     required
                     defaultValue={defaults.endDate}
-                    aria-invalid={fieldErrorsFor(actionData, "endDate") ? true : undefined}
+                    aria-invalid={
+                      fieldErrorsFor(actionData, "endDate") ? true : undefined
+                    }
                     className="mt-1 w-full rounded-input border border-border bg-canvas px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   />
                   <FieldError field="endDate" actionData={actionData} />
@@ -405,7 +442,9 @@ export default function Onboarding({ loaderData }: Route.ComponentProps) {
               {activeTerm && (
                 <p className="rounded-input border border-border bg-canvas px-3 py-2 text-sm text-muted">
                   Active term:{" "}
-                  <span className="font-medium text-ink">{activeTerm.name}</span>{" "}
+                  <span className="font-medium text-ink">
+                    {activeTerm.name}
+                  </span>{" "}
                   ({toDateInputValue(activeTerm.startDate)} –{" "}
                   {toDateInputValue(activeTerm.endDate)})
                 </p>
@@ -425,7 +464,11 @@ export default function Onboarding({ loaderData }: Route.ComponentProps) {
                     <input
                       name="customName"
                       type="text"
-                      aria-invalid={fieldErrorsFor(actionData, "customName") ? true : undefined}
+                      aria-invalid={
+                        fieldErrorsFor(actionData, "customName")
+                          ? true
+                          : undefined
+                      }
                       className="mt-1 w-full rounded-input border border-border bg-canvas px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                     />
                     <FieldError field="customName" actionData={actionData} />
@@ -435,7 +478,11 @@ export default function Onboarding({ loaderData }: Route.ComponentProps) {
                     <input
                       name="customCode"
                       type="text"
-                      aria-invalid={fieldErrorsFor(actionData, "customCode") ? true : undefined}
+                      aria-invalid={
+                        fieldErrorsFor(actionData, "customCode")
+                          ? true
+                          : undefined
+                      }
                       className="mt-1 w-full rounded-input border border-border bg-canvas px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                     />
                     <FieldError field="customCode" actionData={actionData} />

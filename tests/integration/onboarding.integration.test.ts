@@ -1,10 +1,17 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq, inArray } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { RouterContextProvider } from "react-router";
 
 import { closeDb, getDb } from "~/lib/db/client";
 import { AppError } from "~/lib/errors/AppError";
 import { CATALOG_SEED_VERSION, seedCatalog } from "~/lib/db/seed";
+import { sessionUserContext } from "~/context";
+import {
+  createCsrfToken,
+  CSRF_COOKIE_NAME,
+} from "~/lib/request/security.server";
+import { action as createTermAction } from "~/routes/academic-terms._index";
 import {
   academicTerms,
   courseCatalog,
@@ -369,5 +376,102 @@ describe("UT catalog, terms, and onboarding integration", () => {
     const candidate = error as { code?: string; cause?: { code?: string } };
     const code = candidate?.code ?? candidate?.cause?.code;
     expect(code).toBe("23505");
+  });
+
+  it("returns a 409 form error when the terms action creates a second active term", async () => {
+    const userId = newUserId();
+    await createUser(userId);
+    await createAcademicTerm(userId, {
+      name: "Term One",
+      startDate: new Date("2026-01-01T00:00:00Z"),
+      endDate: new Date("2026-06-30T00:00:00Z"),
+    });
+
+    const token = createCsrfToken(userId);
+    const formData = new FormData();
+    formData.set("intent", "create");
+    formData.set("csrfToken", token);
+    formData.set("name", "Term Two");
+    formData.set("startDate", "2026-07-01");
+    formData.set("endDate", "2026-12-31");
+    const request = new Request("http://localhost:3000/academic-terms", {
+      method: "POST",
+      headers: {
+        Origin: "http://localhost:3000",
+        Cookie: `${CSRF_COOKIE_NAME}=${token}`,
+      },
+      body: formData,
+    });
+    const context = new RouterContextProvider();
+    context.set(sessionUserContext, {
+      id: userId,
+      email: `${userId}@onboarding-int.test`,
+      name: "Onboarding Integration User",
+    });
+
+    const response = (await createTermAction({
+      request,
+      context,
+    } as never)) as Response;
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      ok: false,
+      fieldErrors: {},
+      formErrors: [
+        "You already have an active term. Archive it before creating another.",
+      ],
+    });
+
+    const terms = await db
+      .select()
+      .from(academicTerms)
+      .where(eq(academicTerms.userId, userId));
+    expect(terms).toHaveLength(1);
+  });
+
+  it("creates a term through the terms action and redirects on success", async () => {
+    const userId = newUserId();
+    await createUser(userId);
+
+    const token = createCsrfToken(userId);
+    const formData = new FormData();
+    formData.set("intent", "create");
+    formData.set("csrfToken", token);
+    formData.set("name", "Term One");
+    formData.set("startDate", "2026-01-01");
+    formData.set("endDate", "2026-06-30");
+    const request = new Request("http://localhost:3000/academic-terms", {
+      method: "POST",
+      headers: {
+        Origin: "http://localhost:3000",
+        Cookie: `${CSRF_COOKIE_NAME}=${token}`,
+      },
+      body: formData,
+    });
+    const context = new RouterContextProvider();
+    context.set(sessionUserContext, {
+      id: userId,
+      email: `${userId}@onboarding-int.test`,
+      name: "Onboarding Integration User",
+    });
+
+    let redirectResponse: Response | undefined;
+    try {
+      await createTermAction({ request, context } as never);
+    } catch (error) {
+      if (error instanceof Response) redirectResponse = error;
+      else throw error;
+    }
+
+    expect(redirectResponse).toBeDefined();
+    expect(redirectResponse!.status).toBe(302);
+    expect(redirectResponse!.headers.get("location")).toBe("/academic-terms");
+
+    const terms = await db
+      .select()
+      .from(academicTerms)
+      .where(eq(academicTerms.userId, userId));
+    expect(terms).toHaveLength(1);
+    expect(terms[0]).toMatchObject({ name: "Term One", status: "active" });
   });
 });

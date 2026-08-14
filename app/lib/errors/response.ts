@@ -21,7 +21,9 @@ export type ErrorResponseBody = {
   };
 };
 
-export function isFieldErrorResponse(value: unknown): value is FieldErrorResponse {
+export function isFieldErrorResponse(
+  value: unknown,
+): value is FieldErrorResponse {
   return (
     typeof value === "object" &&
     value !== null &&
@@ -65,7 +67,11 @@ export function toActionResponse(error: unknown): Response {
 
   if (isFieldErrorResponse(error)) {
     return jsonWithRequestId(
-      { ok: false, fieldErrors: error.fieldErrors, formErrors: error.formErrors },
+      {
+        ok: false,
+        fieldErrors: error.fieldErrors,
+        formErrors: error.formErrors,
+      },
       { status: 400, requestId },
     );
   }
@@ -110,11 +116,42 @@ export function toActionResponse(error: unknown): Response {
   );
 }
 
+/**
+ * Form-friendly variant of toActionResponse for route actions: every
+ * AppError comes back in the FieldErrorResponse shape ({ ok: false,
+ * fieldErrors, formErrors }) with the domain message in formErrors and the
+ * code's HTTP status (CONFLICT -> 409, NOT_FOUND -> 404, ...), so forms can
+ * render domain guidance (e.g. "You already have an active term...") instead
+ * of surfacing the generic error boundary. redirect() throws a Response,
+ * which is re-thrown untouched so it never becomes an error body. Unexpected
+ * errors fall through to the sanitized toActionResponse path.
+ */
+export function toFormActionResponse(error: unknown): Response {
+  if (error instanceof Response) {
+    throw error;
+  }
+  if (isAppError(error)) {
+    setRequestErrorCode(error.code);
+    const status = ERROR_STATUS[error.code] ?? 500;
+    return jsonWithRequestId(
+      {
+        ok: false,
+        fieldErrors: error.fieldErrors ?? {},
+        formErrors: [error.message],
+      },
+      { status, requestId: getRequestId() },
+    );
+  }
+  return toActionResponse(error);
+}
+
 function jsonWithRequestId(
   body: FieldErrorResponse | ErrorResponseBody,
   options: { status: number; requestId: string },
 ): Response {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
   if (options.requestId !== "") {
     headers[REQUEST_ID_HEADER] = options.requestId;
   }

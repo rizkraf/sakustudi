@@ -1,8 +1,15 @@
 import { data, redirect, Form, Link, useActionData } from "react-router";
 
 import { csrfTokenContext, sessionUserContext } from "~/context";
-import { requireConsentsMiddleware, requireUserMiddleware } from "~/lib/auth/session";
-import { isFieldErrorResponse, type FieldErrorResponse } from "~/lib/errors/response";
+import {
+  requireConsentsMiddleware,
+  requireUserMiddleware,
+} from "~/lib/auth/session";
+import {
+  isFieldErrorResponse,
+  toFormActionResponse,
+  type FieldErrorResponse,
+} from "~/lib/errors/response";
 import {
   assertCsrfMutation,
   createCsrfToken,
@@ -10,7 +17,10 @@ import {
 } from "~/lib/request/security.server";
 import { parseForm } from "~/lib/validation/form-data";
 import { listTermCourseCounts } from "~/modules/catalog/catalog.repository";
-import { createAcademicTerm, setActiveTerm } from "~/modules/academic-terms/terms.service";
+import {
+  createAcademicTerm,
+  setActiveTerm,
+} from "~/modules/academic-terms/terms.service";
 import {
   findActiveTerm,
   listOwnedTerms,
@@ -84,29 +94,35 @@ export async function action({ request, context }: Route.ActionArgs) {
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "");
 
-  if (intent === "create") {
-    const parsed = parseForm(createTermSchema, formData);
-    if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
-    await createAcademicTerm(user.id, parsed);
-    throw redirect("/academic-terms");
-  }
-
-  if (intent === "activate") {
-    const termId = String(formData.get("termId") ?? "");
-    if (termId === "") {
-      return data<FieldErrorResponse>(
-        { ok: false, fieldErrors: {}, formErrors: ["Term id is required."] },
-        { status: 400 },
-      );
+  try {
+    if (intent === "create") {
+      const parsed = parseForm(createTermSchema, formData);
+      if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
+      await createAcademicTerm(user.id, parsed);
+      throw redirect("/academic-terms");
     }
-    await setActiveTerm(user.id, termId);
-    throw redirect("/academic-terms");
-  }
 
-  return data<FieldErrorResponse>(
-    { ok: false, fieldErrors: {}, formErrors: ["Unknown action."] },
-    { status: 400 },
-  );
+    if (intent === "activate") {
+      const termId = String(formData.get("termId") ?? "");
+      if (termId === "") {
+        return data<FieldErrorResponse>(
+          { ok: false, fieldErrors: {}, formErrors: ["Term id is required."] },
+          { status: 400 },
+        );
+      }
+      await setActiveTerm(user.id, termId);
+      throw redirect("/academic-terms");
+    }
+
+    return data<FieldErrorResponse>(
+      { ok: false, fieldErrors: {}, formErrors: ["Unknown action."] },
+      { status: 400 },
+    );
+  } catch (error) {
+    // redirect() throws a Response; never convert it into an error body.
+    if (error instanceof Response) throw error;
+    return toFormActionResponse(error);
+  }
 }
 
 function FieldError({
@@ -125,9 +141,15 @@ function FieldError({
   );
 }
 
-export default function AcademicTermsIndex({ loaderData }: Route.ComponentProps) {
+export default function AcademicTermsIndex({
+  loaderData,
+}: Route.ComponentProps) {
   const actionData = useActionData<ActionData>();
   const { terms, activeTermId, csrfToken, defaults } = loaderData;
+  const formError =
+    actionData && actionData.formErrors.length > 0
+      ? actionData.formErrors[0]
+      : undefined;
 
   return (
     <main className="mx-auto max-w-3xl px-page pb-24 pt-6 text-ink lg:pb-10 lg:pt-8">
@@ -138,6 +160,14 @@ export default function AcademicTermsIndex({ loaderData }: Route.ComponentProps)
 
       <section className="mt-6 rounded-card border border-border bg-surface p-6">
         <h2 className="text-sm font-semibold">New term</h2>
+        {formError && (
+          <p
+            role="alert"
+            className="mt-3 rounded-input border border-danger/40 bg-danger/10 p-3 text-sm text-ink"
+          >
+            {formError}
+          </p>
+        )}
         <Form method="post" className="mt-4 space-y-4">
           <input type="hidden" name="intent" value="create" />
           <input type="hidden" name="csrfToken" value={csrfToken} />
@@ -217,7 +247,8 @@ export default function AcademicTermsIndex({ loaderData }: Route.ComponentProps)
               </div>
               <p className="mt-1 text-xs text-muted">
                 {formatDate(term.startDate)} – {formatDate(term.endDate)} ·{" "}
-                {term.courseCount} {term.courseCount === 1 ? "course" : "courses"}
+                {term.courseCount}{" "}
+                {term.courseCount === 1 ? "course" : "courses"}
               </p>
             </div>
             {term.id !== activeTermId && (

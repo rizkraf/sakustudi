@@ -3,8 +3,15 @@ import { z } from "zod";
 
 import { CoursePicker } from "~/components/catalog/CoursePicker";
 import { csrfTokenContext, sessionUserContext } from "~/context";
-import { requireConsentsMiddleware, requireUserMiddleware } from "~/lib/auth/session";
-import { isFieldErrorResponse, type FieldErrorResponse } from "~/lib/errors/response";
+import {
+  requireConsentsMiddleware,
+  requireUserMiddleware,
+} from "~/lib/auth/session";
+import {
+  isFieldErrorResponse,
+  toFormActionResponse,
+  type FieldErrorResponse,
+} from "~/lib/errors/response";
 import {
   assertCsrfMutation,
   createCsrfToken,
@@ -53,7 +60,9 @@ function formatDate(date: Date): string {
 
 export const meta: Route.MetaFunction = ({ loaderData }) => [
   {
-    title: loaderData ? `${loaderData.term.name} | SakuStudi` : "Term | SakuStudi",
+    title: loaderData
+      ? `${loaderData.term.name} | SakuStudi`
+      : "Term | SakuStudi",
   },
 ];
 
@@ -88,37 +97,49 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   const intent = String(formData.get("intent") ?? "");
   const termId = params.termId ?? "";
 
-  if (intent === "activate") {
-    await setActiveTerm(user.id, termId);
-    throw redirect(`/academic-terms/${termId}`);
-  }
-
-  if (intent === "add-catalog") {
-    const parsed = parseForm(addCatalogCoursesSchema, formData);
-    if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
-    for (const courseId of parsed.courseIds) {
-      await createCourseFromCatalog(user.id, termId, courseId);
+  try {
+    if (intent === "activate") {
+      await setActiveTerm(user.id, termId);
+      throw redirect(`/academic-terms/${termId}`);
     }
-    throw redirect(`/academic-terms/${termId}`);
-  }
 
-  if (intent === "add-custom") {
-    const parsed = parseForm(customCourseSchema, formData);
-    if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
-    await createCustomCourse(user.id, termId, parsed);
-    throw redirect(`/academic-terms/${termId}`);
-  }
+    if (intent === "add-catalog") {
+      const parsed = parseForm(addCatalogCoursesSchema, formData);
+      if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
+      for (const courseId of parsed.courseIds) {
+        await createCourseFromCatalog(user.id, termId, courseId);
+      }
+      throw redirect(`/academic-terms/${termId}`);
+    }
 
-  return data<FieldErrorResponse>(
-    { ok: false, fieldErrors: {}, formErrors: ["Unknown action."] },
-    { status: 400 },
-  );
+    if (intent === "add-custom") {
+      const parsed = parseForm(customCourseSchema, formData);
+      if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
+      await createCustomCourse(user.id, termId, parsed);
+      throw redirect(`/academic-terms/${termId}`);
+    }
+
+    return data<FieldErrorResponse>(
+      { ok: false, fieldErrors: {}, formErrors: ["Unknown action."] },
+      { status: 400 },
+    );
+  } catch (error) {
+    // redirect() throws a Response; never convert it into an error body.
+    if (error instanceof Response) throw error;
+    return toFormActionResponse(error);
+  }
 }
 
-export default function AcademicTermDetail({ loaderData }: Route.ComponentProps) {
+export default function AcademicTermDetail({
+  loaderData,
+}: Route.ComponentProps) {
   const actionData = useActionData<ActionData>();
   const { term, courses, catalogCourses, csrfToken } = loaderData;
   const isActive = term.status === "active";
+  const formError =
+    actionData && actionData.formErrors.length > 0
+      ? actionData.formErrors[0]
+      : undefined;
 
   return (
     <main className="mx-auto max-w-3xl px-page pb-24 pt-6 text-ink lg:pb-10 lg:pt-8">
@@ -144,6 +165,15 @@ export default function AcademicTermDetail({ loaderData }: Route.ComponentProps)
       <p className="mt-1 text-sm text-muted">
         {formatDate(term.startDate)} – {formatDate(term.endDate)}
       </p>
+
+      {formError && (
+        <p
+          role="alert"
+          className="mt-4 rounded-input border border-danger/40 bg-danger/10 p-3 text-sm text-ink"
+        >
+          {formError}
+        </p>
+      )}
 
       {!isActive && (
         <Form method="post" className="mt-4">
@@ -213,7 +243,10 @@ export default function AcademicTermDetail({ loaderData }: Route.ComponentProps)
           </button>
         </Form>
 
-        <Form method="post" className="mt-6 space-y-3 border-t border-border pt-4">
+        <Form
+          method="post"
+          className="mt-6 space-y-3 border-t border-border pt-4"
+        >
           <input type="hidden" name="intent" value="add-custom" />
           <input type="hidden" name="csrfToken" value={csrfToken} />
           <p className="text-sm font-medium">Custom course</p>

@@ -54,3 +54,27 @@ test("onboarding preserves field errors on the term step", async ({ page }) => {
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/step=3/);
 });
+
+test("creating a second active term shows the conflict message, not the error boundary", async ({
+  page,
+}) => {
+  const email = uniqueEmail("onboard-conflict");
+  await signInViaApi(page, email, "Conflict User");
+
+  await page.goto("/academic-terms");
+  await page.getByLabel("Term name").fill("Term One");
+  await page.getByRole("button", { name: "Create term" }).click();
+  await expect(page.getByText("Term One")).toBeVisible();
+
+  await page.getByLabel("Term name").fill("Term Two");
+  await page.getByRole("button", { name: "Create term" }).click();
+
+  await expect(
+    page.getByText(
+      "You already have an active term. Archive it before creating another.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByText("Oops!")).not.toBeVisible();
+  await expect(page.getByText("Term One")).toBeVisible();
+  await expect(page.getByText("Term Two")).not.toBeVisible();
+});

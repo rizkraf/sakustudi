@@ -4,6 +4,7 @@ import { AppError } from "~/lib/errors/AppError";
 import {
   isFieldErrorResponse,
   toActionResponse,
+  toFormActionResponse,
   type FieldErrorResponse,
 } from "~/lib/errors/response";
 import { requireOwnedUser } from "~/lib/authorization/ownership.server";
@@ -136,6 +137,67 @@ describe("toActionResponse", () => {
     const response = toActionResponse(new AppError("NOT_FOUND", "leaky detail"));
     const body = (await response.json()) as { error: { message: string } };
     expect(body.error.message).toBe("Not found.");
+  });
+});
+
+describe("toFormActionResponse", () => {
+  it("returns AppErrors in the form shape with the domain message and status", async () => {
+    const response = withRequestId("req-form-1", () =>
+      toFormActionResponse(
+        new AppError(
+          "CONFLICT",
+          "You already have an active term. Archive it before creating another.",
+        ),
+      ),
+    );
+    expect(response.status).toBe(409);
+    const body = (await response.json()) as FieldErrorResponse;
+    expect(body).toEqual({
+      ok: false,
+      fieldErrors: {},
+      formErrors: [
+        "You already have an active term. Archive it before creating another.",
+      ],
+    });
+    expect(isFieldErrorResponse(body)).toBe(true);
+    expect(response.headers.get("x-request-id")).toBe("req-form-1");
+  });
+
+  it("keeps field errors and status for validation failures", async () => {
+    const response = toFormActionResponse(
+      new AppError("VALIDATION_FAILED", "Please fix the highlighted fields.", {
+        fieldErrors: { name: ["Course name is required."] },
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      ok: false,
+      fieldErrors: { name: ["Course name is required."] },
+      formErrors: ["Please fix the highlighted fields."],
+    });
+  });
+
+  it("falls through to the sanitized response for unexpected errors", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    try {
+      const response = withRequestId("req-form-2", () =>
+        toFormActionResponse(new Error("postgres: connection refused")),
+      );
+      expect(response.status).toBe(500);
+      const body = (await response.json()) as { error: { code: string } };
+      expect(body.error.code).toBe("INTERNAL");
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("re-throws redirect Responses untouched", () => {
+    const redirectResponse = new Response(null, { status: 302 });
+    expect(() => toFormActionResponse(redirectResponse)).toThrow(
+      redirectResponse,
+    );
   });
 });
 
