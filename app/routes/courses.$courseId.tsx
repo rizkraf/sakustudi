@@ -1,6 +1,7 @@
 import { data, redirect, Link, useActionData } from "react-router";
 
 import { ActivityCard } from "~/components/activities/ActivityCard";
+import { UsefulLinks } from "~/components/links/UsefulLinks";
 import { AppShell } from "~/components/layout/AppShell";
 import { csrfTokenContext, sessionUserContext } from "~/context";
 import {
@@ -20,8 +21,11 @@ import {
 import { parseForm } from "~/lib/validation/form-data";
 import { AppError } from "~/lib/errors/AppError";
 import { getCourseDetail } from "~/modules/courses/courses.service";
+import { listUsefulLinks } from "~/modules/links/links.service";
+import { createUsefulLink, deleteUsefulLink } from "~/modules/links/links.service";
 import { setActivityStatusFromInput } from "~/modules/activities/activities.service";
 import { setActivityStatusSchema } from "~/modules/activities/activities.schema";
+import { usefulLinkSchema } from "~/modules/notes/notes.schema";
 
 import type { Route } from "./+types/courses.$courseId";
 
@@ -46,8 +50,12 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   if (!user) throw redirect("/login");
 
   let detail;
+  let links;
   try {
-    detail = await getCourseDetail(user.id, params.courseId ?? "");
+    [detail, links] = await Promise.all([
+      getCourseDetail(user.id, params.courseId ?? ""),
+      listUsefulLinks(user.id, params.courseId),
+    ]);
   } catch (error) {
     if (error instanceof AppError && error.code === "NOT_FOUND") {
       throw new Response(null, { status: 404 });
@@ -56,6 +64,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   }
   return {
     ...detail,
+    links,
     now: new Date().toISOString(),
     csrfToken: context.get(csrfTokenContext) || createCsrfToken(user.id),
     user: { name: user.name ?? undefined, email: user.email },
@@ -78,6 +87,25 @@ export async function action({ request, context }: Route.ActionArgs) {
       throw redirect(request.url);
     }
 
+    if (intent === "add-link") {
+      const parsed = parseForm(usefulLinkSchema, formData);
+      if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
+      await createUsefulLink(user.id, parsed);
+      throw redirect(request.url);
+    }
+
+    if (intent === "delete-link") {
+      const linkId = String(formData.get("linkId") ?? "");
+      if (!linkId) {
+        return data<FieldErrorResponse>(
+          { ok: false, fieldErrors: {}, formErrors: ["Link is missing."] },
+          { status: 400 },
+        );
+      }
+      await deleteUsefulLink(user.id, linkId);
+      throw redirect(request.url);
+    }
+
     return data<FieldErrorResponse>(
       { ok: false, fieldErrors: {}, formErrors: ["Unknown action."] },
       { status: 400 },
@@ -90,8 +118,16 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 export default function CourseDetail({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<ActionData>();
-  const { course, progress, completedCount, totalCount, activities, csrfToken, user } =
-    loaderData;
+  const {
+    course,
+    progress,
+    completedCount,
+    totalCount,
+    activities,
+    links,
+    csrfToken,
+    user,
+  } = loaderData;
 
   void actionData;
 
@@ -139,12 +175,20 @@ export default function CourseDetail({ loaderData }: Route.ComponentProps) {
         <section className="mt-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-sm font-semibold">Activities</h2>
-            <Link
-              to={`/activities/new?courseId=${course.id}`}
-              className="inline-flex min-h-11 items-center justify-center rounded-input bg-primary px-4 py-2.5 text-sm font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus hover:bg-primary/90"
-            >
-              Add activity
-            </Link>
+            <div className="flex gap-2">
+              <Link
+                to={`/notes/new?courseId=${course.id}`}
+                className="inline-flex min-h-11 items-center justify-center rounded-input border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus hover:bg-canvas"
+              >
+                Add note
+              </Link>
+              <Link
+                to={`/activities/new?courseId=${course.id}`}
+                className="inline-flex min-h-11 items-center justify-center rounded-input bg-primary px-4 py-2.5 text-sm font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus hover:bg-primary/90"
+              >
+                Add activity
+              </Link>
+            </div>
           </div>
           {activities.length === 0 ? (
             <p className="mt-3 rounded-card border border-dashed border-border bg-surface px-6 py-8 text-center text-sm text-muted">
@@ -165,6 +209,8 @@ export default function CourseDetail({ loaderData }: Route.ComponentProps) {
             </ul>
           )}
         </section>
+
+        <UsefulLinks links={links} courseId={course.id} csrfToken={csrfToken} />
       </main>
     </AppShell>
   );

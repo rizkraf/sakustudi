@@ -29,6 +29,13 @@
       "when": 1786728554400,
       "tag": "0003_add-activity-link",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786730059696,
+      "tag": "0004_blushing_sentinels",
+      "breakpoints": true
     }
   ]
 }

@@ -19,4 +19,7 @@ export default [
   route("activities/:activityId", "routes/activities.$activityId.tsx"),
   route("activities/:activityId/edit", "routes/activities.$activityId.edit.tsx"),
   route("courses/:courseId", "routes/courses.$courseId.tsx"),
+  route("notes", "routes/notes._index.tsx"),
+  route("notes/new", "routes/notes.new.tsx"),
+  route("notes/:noteId", "routes/notes.$noteId.tsx"),
 ] satisfies RouteConfig;

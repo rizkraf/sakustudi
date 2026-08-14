@@ -285,6 +285,8 @@ export const notes = pgTable(
     }),
     title: text("title").notNull(),
     content: text("content"),
+    contentText: text("content_text").notNull().default(""),
+    tags: text("tags").array().notNull().default([]),
     pinned: boolean("pinned").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

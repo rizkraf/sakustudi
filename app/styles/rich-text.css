@@ -59,3 +59,45 @@
 .rich-text hr {
   @apply border-border;
 }
+
+.rich-text-editor {
+  @apply min-h-48 px-3 py-2 text-ink;
+}
+
+.rich-text-editor:focus {
+  @apply outline-none;
+}
+
+.rich-text-editor > * + * {
+  @apply mt-2;
+}
+
+.rich-text-editor h1 {
+  @apply text-2xl font-semibold;
+}
+
+.rich-text-editor h2 {
+  @apply text-xl font-semibold;
+}
+
+.rich-text-editor h3 {
+  @apply text-lg font-semibold;
+}
+
+.rich-text-editor ul {
+  @apply list-disc pl-6;
+}
+
+.rich-text-editor ol {
+  @apply list-decimal pl-6;
+}
+
+.rich-text-editor a {
+  @apply text-ink underline decoration-primary decoration-2 underline-offset-2;
+}
+
+.rich-text-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  @apply float-left h-0 text-muted;
+  pointer-events: none;
+}
