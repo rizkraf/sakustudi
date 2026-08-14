@@ -396,4 +396,25 @@ describe("origin and CSRF boundaries", () => {
       code: "FORBIDDEN",
     });
   });
+
+  it("does not consume the request body, so actions can read form data afterwards", async () => {
+    const token = createCsrfToken("user-a");
+    const formData = new FormData();
+    formData.set("csrfToken", token);
+    formData.set("title", "Body still intact");
+    const request = new Request("http://localhost/notes", {
+      method: "POST",
+      headers: {
+        Origin: "http://localhost:3000",
+        Cookie: `${CSRF_COOKIE_NAME}=${token}`,
+      },
+      body: formData,
+    });
+
+    await assertCsrfMutation(request, "user-a");
+
+    const body = await request.formData();
+    expect(body.get("csrfToken")).toBe(token);
+    expect(body.get("title")).toBe("Body still intact");
+  });
 });

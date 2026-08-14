@@ -8,15 +8,26 @@ export const CSRF_HEADER_NAME = "x-csrf-token";
 
 const DEFAULT_BASE_URL = "http://localhost:3000";
 const KNOWN_DEV_SECRET = "dev-secret-change-me-before-deploy";
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const CSRF_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
-function getCsrfSecret(): string {
-  return (
-    process.env.CSRF_SECRET ??
-    process.env.BETTER_AUTH_SECRET ??
-    KNOWN_DEV_SECRET
+const CSRF_SECRET =
+  process.env.CSRF_SECRET ??
+  process.env.BETTER_AUTH_SECRET ??
+  (IS_PRODUCTION ? "" : KNOWN_DEV_SECRET);
+
+// CSRF tokens must never be forgeable: fail fast at boot when running in
+// production without a strong secret, independent of the auth boot guard.
+if (IS_PRODUCTION && (!CSRF_SECRET || CSRF_SECRET === KNOWN_DEV_SECRET)) {
+  throw new Error(
+    "CSRF_SECRET must be set to a strong random secret in production. " +
+      "Generate one with `openssl rand -base64 32`.",
   );
+}
+
+function getCsrfSecret(): string {
+  return CSRF_SECRET;
 }
 
 /**
@@ -112,6 +123,15 @@ function cookieValue(cookieHeader: string | null, name: string): string | null {
  * methods pass through, mutations must come from a trusted Origin and carry a
  * valid signed token matching the session user in both the cookie and the
  * form field (or header). Throws AppError(FORBIDDEN) otherwise.
+ *
+ * Body contract for route actions: this check reads the token from a clone
+ * of the request, so the caller's request body is NOT consumed. Actions can
+ * (and must) call `await request.formData()` afterwards to parse their own
+ * form data, in any order:
+ *
+ *   const user = await requireSessionUser(request);
+ *   await assertCsrfMutation(request, user.id);
+ *   const parsed = parseForm(schema, await request.formData());
  */
 export async function assertCsrfMutation(request: Request, userId: string): Promise<void> {
   const method = request.method.toUpperCase();
@@ -120,7 +140,8 @@ export async function assertCsrfMutation(request: Request, userId: string): Prom
   assertTrustedOrigin(request);
 
   const cookieToken = cookieValue(request.headers.get("cookie"), CSRF_COOKIE_NAME);
-  const formData = await request.formData();
+  const csrfRequest = request.clone();
+  const formData = await csrfRequest.formData();
   const fieldToken =
     formData.get(CSRF_FIELD_NAME) ?? request.headers.get(CSRF_HEADER_NAME);
 

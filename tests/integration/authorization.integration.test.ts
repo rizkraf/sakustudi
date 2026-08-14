@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { spawnSync } from "node:child_process";
 import { inArray } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 
@@ -154,5 +155,67 @@ describe("repository ownership boundaries", () => {
     } catch (error) {
       expect((error as AppError).code).toBe("NOT_FOUND");
     }
+  });
+
+  describe("production CSRF secret guard", () => {
+    const BOOT_SCRIPT =
+      "import('./app/lib/request/security.server.ts').then(() => process.exit(0)).catch((e) => { console.error(e?.message ?? String(e)); process.exit(1); })";
+
+    function bootSecurityInProduction(
+      csrfSecret: string | undefined,
+      betterAuthSecret: string | undefined,
+    ): { status: number | null; stderr: string } {
+      const env: Record<string, string> = {
+        ...process.env,
+        NODE_ENV: "production",
+      };
+      if (csrfSecret !== undefined) {
+        env.CSRF_SECRET = csrfSecret;
+      } else {
+        delete env.CSRF_SECRET;
+      }
+      if (betterAuthSecret !== undefined) {
+        env.BETTER_AUTH_SECRET = betterAuthSecret;
+      } else {
+        delete env.BETTER_AUTH_SECRET;
+      }
+      const result = spawnSync(
+        process.execPath,
+        ["--import", "tsx", "--input-type=module", "-e", BOOT_SCRIPT],
+        { env, encoding: "utf8", timeout: 60_000 },
+      );
+      return { status: result.status, stderr: result.stderr ?? "" };
+    }
+
+    it("fails to boot in production without any secret", () => {
+      const { status, stderr } = bootSecurityInProduction(undefined, undefined);
+      expect(status).not.toBe(0);
+      expect(stderr).toContain("CSRF_SECRET");
+    });
+
+    it("fails to boot in production with the known placeholder secret", () => {
+      const { status, stderr } = bootSecurityInProduction(
+        "dev-secret-change-me-before-deploy",
+        undefined,
+      );
+      expect(status).not.toBe(0);
+      expect(stderr).toContain("CSRF_SECRET");
+    });
+
+    it("boots in production with a real CSRF secret", () => {
+      const { status } = bootSecurityInProduction(
+        "a-strong-random-secret-that-is-not-a-placeholder-0123456789",
+        undefined,
+      );
+      expect(status).toBe(0);
+    });
+
+    it("boots in production using a real BETTER_AUTH_SECRET fallback", () => {
+      const { status } = bootSecurityInProduction(
+        undefined,
+        "a-strong-random-secret-that-is-not-a-placeholder-0123456789",
+      );
+      expect(status).toBe(0);
+    });
   });
 });
