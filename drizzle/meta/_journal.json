@@ -15,6 +15,13 @@
       "when": 1786719970758,
       "tag": "0001_plain_sebastian_shaw",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786724716939,
+      "tag": "0002_add_profiles_onboarding_completed_at",
+      "breakpoints": true
     }
   ]
 }

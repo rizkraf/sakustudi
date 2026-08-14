@@ -1,5 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+import type { MiddlewareFunction } from "react-router";
+
+import { csrfTokenContext, sessionUserContext } from "~/context";
 import { AppError } from "~/lib/errors/AppError";
 
 export const CSRF_COOKIE_NAME = "sakustudi_csrf";
@@ -96,7 +99,10 @@ export function verifyCsrfToken(
 }
 
 export function createCsrfCookie(userId: string, now = Date.now()): string {
-  const token = createCsrfToken(userId, now);
+  return buildCsrfCookie(createCsrfToken(userId, now));
+}
+
+function buildCsrfCookie(token: string): string {
   const secure =
     process.env.BETTER_AUTH_SECURE_COOKIES === "true" ||
     (process.env.BETTER_AUTH_URL ?? "").startsWith("https://");
@@ -109,6 +115,35 @@ export function createCsrfCookie(userId: string, now = Date.now()): string {
     ...(secure ? ["Secure"] : []),
   ].join("; ");
 }
+
+/**
+ * Route middleware that mints one signed CSRF token per GET request, stores
+ * it in router context (so loaders render the exact same string into form
+ * hidden fields), and sets it as the HttpOnly cookie on the response. Run
+ * after requireUserMiddleware so the session user is in context.
+ *
+ * The cookie is only refreshed on GET responses: action error responses keep
+ * the browser's existing cookie, which stays in lockstep with the form token
+ * rendered by the last loader run (assertCsrfMutation compares them strictly).
+ */
+export const csrfCookieMiddleware: MiddlewareFunction<Response> = async (
+  { context, request },
+  next,
+) => {
+  const user = context.get(sessionUserContext);
+  const isSafeMethod = ["GET", "HEAD", "OPTIONS"].includes(
+    request.method.toUpperCase(),
+  );
+  if (user && isSafeMethod && context.get(csrfTokenContext) === "") {
+    context.set(csrfTokenContext, createCsrfToken(user.id));
+  }
+  const response = await next();
+  const token = context.get(csrfTokenContext);
+  if (token !== "") {
+    response.headers.append("Set-Cookie", buildCsrfCookie(token));
+  }
+  return response;
+};
 
 function cookieValue(cookieHeader: string | null, name: string): string | null {
   for (const part of (cookieHeader ?? "").split(";")) {

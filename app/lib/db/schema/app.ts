@@ -80,6 +80,9 @@ export const profiles = pgTable("profiles", {
   avatarUrl: text("avatar_url"),
   timezone: text("timezone").notNull().default("UTC"),
   settings: jsonb("settings").notNull().default({}),
+  onboardingCompletedAt: timestamp("onboarding_completed_at", {
+    withTimezone: true,
+  }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
