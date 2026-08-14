@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build output
+build/
+dist/
+.env
+
+# Worktrees (isolated implementation workspaces)
+.worktrees/
+
+# Test artifacts
+coverage/
+test-results/
+playwright-report/
+
+# Local tooling
+.tmp/
+.superpowers/
