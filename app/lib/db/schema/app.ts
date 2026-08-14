@@ -113,35 +113,53 @@ export const legalConsents = pgTable(
   ],
 );
 
-export const studyPrograms = pgTable("study_programs", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  code: text("code").notNull().unique(),
-  name: text("name").notNull(),
-  description: text("description"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const studyPrograms = pgTable(
+  "study_programs",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    code: text("code").notNull().unique(),
+    name: text("name").notNull(),
+    description: text("description"),
+    sourceVersion: text("source_version")
+      .notNull()
+      .default("1"),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("study_programs_active_idx").on(t.isActive)],
+);
 
-export const courseCatalog = pgTable("course_catalog", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  code: text("code").notNull().unique(),
-  name: text("name").notNull(),
-  description: text("description"),
-  credits: integer("credits").notNull().default(3),
-  studyProgramId: text("study_program_id").references(
-    () => studyPrograms.id,
-    { onDelete: "cascade" },
-  ),
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const courseCatalog = pgTable(
+  "course_catalog",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    code: text("code").notNull().unique(),
+    name: text("name").notNull(),
+    description: text("description"),
+    credits: integer("credits").notNull().default(3),
+    studyProgramId: text("study_program_id").references(
+      () => studyPrograms.id,
+      { onDelete: "cascade" },
+    ),
+    sourceVersion: text("source_version")
+      .notNull()
+      .default("1"),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("course_catalog_study_program_idx").on(t.studyProgramId),
+    index("course_catalog_active_idx").on(t.isActive),
+  ],
+);
 
 export const academicTerms = pgTable(
   "academic_terms",
@@ -205,6 +223,7 @@ export const courses = pgTable(
   },
   (t) => [
     index("courses_user_idx").on(t.userId),
+    index("courses_catalog_idx").on(t.catalogId),
     index("courses_term_idx").on(t.termId),
     check("courses_credits_check", sql`${t.credits} is null or ${t.credits} >= 0`),
   ],
@@ -241,6 +260,7 @@ export const activities = pgTable(
   (t) => [
     index("activities_user_idx").on(t.userId),
     index("activities_course_idx").on(t.courseId),
+    index("activities_term_idx").on(t.termId),
   ],
 );
 
@@ -272,6 +292,7 @@ export const notes = pgTable(
   (t) => [
     index("notes_user_idx").on(t.userId),
     index("notes_course_idx").on(t.courseId),
+    index("notes_term_idx").on(t.termId),
   ],
 );
 
@@ -302,6 +323,7 @@ export const calendarEvents = pgTable(
   },
   (t) => [
     index("calendar_events_user_idx").on(t.userId),
+    index("calendar_events_course_idx").on(t.courseId),
     index("calendar_events_start_idx").on(t.startsAt),
     check(
       "calendar_events_range_check",
@@ -342,6 +364,10 @@ export const attachments = pgTable(
   },
   (t) => [
     index("attachments_user_idx").on(t.userId),
+    index("attachments_course_idx").on(t.courseId),
+    index("attachments_activity_idx").on(t.activityId),
+    index("attachments_note_idx").on(t.noteId),
+    index("attachments_calendar_event_idx").on(t.calendarEventId),
     check(
       "attachments_single_parent_check",
       sql`((${t.courseId} is not null)::int + (${t.activityId} is not null)::int + (${t.noteId} is not null)::int + (${t.calendarEventId} is not null)::int) = 1`,
@@ -371,7 +397,10 @@ export const usefulLinks = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [index("useful_links_user_idx").on(t.userId)],
+  (t) => [
+    index("useful_links_user_idx").on(t.userId),
+    index("useful_links_course_idx").on(t.courseId),
+  ],
 );
 
 export const reminders = pgTable(

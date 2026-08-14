@@ -213,6 +213,7 @@ describe("db schema", () => {
 
     const programCodes = new Set(programRows.map((p) => p.code));
     const courseCodes = new Set(courseRows.map((c) => c.code));
+    const sourceVersion = String(CATALOG_SEED_VERSION);
 
     expect(programRows.length).toBe(programCodes.size);
     expect(courseRows.length).toBe(courseCodes.size);
@@ -220,6 +221,14 @@ describe("db schema", () => {
     expect(programCodes).toContain("SI");
     expect(programCodes).toContain("TI");
     expect(courseCodes).toContain("MKDU4111");
+
+    for (const program of programRows) {
+      expect(program.sourceVersion).toBe(sourceVersion);
+      expect(program.isActive).toBe(true);
+    }
+    for (const course of courseRows) {
+      expect(course.sourceVersion).toBe(sourceVersion);
+    }
     expect(CATALOG_SEED_VERSION).toBeGreaterThanOrEqual(1);
   });
 });

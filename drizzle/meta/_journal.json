@@ -8,6 +8,13 @@
       "when": 1786719559763,
       "tag": "0000_perpetual_gauntlet",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786719970758,
+      "tag": "0001_plain_sebastian_shaw",
+      "breakpoints": true
     }
   ]
 }

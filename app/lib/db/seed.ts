@@ -84,7 +84,18 @@ const SEED_COURSES = [
 export async function seedCatalog(
   db: NodePgDatabase<AppSchema>,
 ): Promise<void> {
-  await db.insert(studyPrograms).values(SEED_PROGRAMS).onConflictDoNothing();
+  const sourceVersion = String(CATALOG_SEED_VERSION);
+
+  await db
+    .insert(studyPrograms)
+    .values(
+      SEED_PROGRAMS.map((p) => ({
+        ...p,
+        sourceVersion,
+        isActive: true,
+      })),
+    )
+    .onConflictDoNothing();
 
   const programByCode = new Map(
     (await db.select().from(studyPrograms)).map((p) => [p.code, p.id]),
@@ -95,6 +106,7 @@ export async function seedCatalog(
     name: c.name,
     credits: c.credits,
     description: c.description,
+    sourceVersion,
     studyProgramId: programByCode.get(c.studyProgramCode) ?? null,
   }));
 
