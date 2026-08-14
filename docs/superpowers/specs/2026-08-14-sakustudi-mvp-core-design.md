@@ -49,7 +49,9 @@ The core has no billing, AI, admin dashboard, or direct UT integration.
 | Deadline without time | `23:59` in `Asia/Jakarta` |
 | Reminder schedule | Three days and one day before, at 09:00 local time |
 | Reminder email | Optional channel; SMTP required for auth verification and password reset |
-| Notes editor | WYSIWYG rich text UI; sanitized HTML plus plain-text search field |
+| Notes editor | Tiptap StarterKit WYSIWYG UI; sanitized HTML plus plain-text search field |
+| Input validation | Zod schemas at route and domain boundaries |
+| HTML sanitization | Server-side `sanitize-html` with explicit allowlists |
 | Queue | BullMQ with Redis; PostgreSQL remains source of truth |
 | Deployment | Docker Compose, with web, worker, PostgreSQL, and Redis services |
 | API shape | No separate API service; React Router loaders/actions and server handlers |
@@ -106,6 +108,7 @@ passes through server-side loaders, actions, or handlers.
 - Route loaders for reads and route actions for mutations.
 - Server middleware for authentication context and request IDs.
 - Schema validation at every action boundary.
+- Zod schemas provide runtime validation and inferred TypeScript types.
 
 React Router actions are server-side mutation handlers. Protected route
 middleware redirects unauthenticated users before loaders execute. Ownership
@@ -174,6 +177,14 @@ Queue rules:
 - Downloads use an authorized server handler or short-lived signed URL.
 - The database stores object key, original filename, size, MIME hint, checksum,
   owner, and parent relation.
+
+### Rich Text
+
+Tiptap with `StarterKit` provides the user-facing editor and toolbar. The
+editor output is read with `editor.getHTML()`, then sanitized by
+`sanitize-html` before storage. The server uses an explicit allowlist for tags,
+attributes, and URL schemes; client-side filtering is not treated as a
+security boundary.
 
 ### PWA
 
@@ -586,6 +597,13 @@ The MVP is ready for a pilot when:
 - Drizzle PostgreSQL migrations and transactions:
   `https://orm.drizzle.team/docs/migrations`
   `https://orm.drizzle.team/docs/transactions`
+- Tiptap React editor and HTML output:
+  `https://tiptap.dev/docs/editor/getting-started/install/react`
+  `https://tiptap.dev/docs/guides/output-json-html`
+- Zod safe parsing and inferred validation errors:
+  `https://zod.dev/`
+- `sanitize-html` allowlists and URL schemes:
+  `https://github.com/apostrophecms/sanitize-html`
 - Better Auth Drizzle adapter, email/password, sessions, and deletion:
   `https://www.better-auth.com/docs/adapters/drizzle`
   `https://www.better-auth.com/docs/authentication/email-password`
