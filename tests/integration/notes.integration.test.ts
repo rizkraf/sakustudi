@@ -329,7 +329,8 @@ describe("notes and useful links integration", () => {
     expect(all.map((l) => l.title)).toContain("Struktur Data modules");
 
     const scoped = await listUsefulLinks(userId, courseId);
-    expect(scoped.map((l) => l.id)).toEqual([courseLink.id]);
+    expect(scoped.map((l) => l.id)).toContain(courseLink.id);
+    expect(scoped.map((l) => l.id)).not.toContain(globalLink.id);
 
     const withoutScope = await listUsefulLinks(userId, null);
     expect(withoutScope.map((l) => l.id)).toEqual(
@@ -337,7 +338,8 @@ describe("notes and useful links integration", () => {
     );
 
     await deleteUsefulLink(userId, courseLink.id);
-    expect(await listUsefulLinks(userId, courseId)).toHaveLength(0);
+    const afterDelete = await listUsefulLinks(userId, courseId);
+    expect(afterDelete.map((l) => l.id)).not.toContain(courseLink.id);
   });
 
   it("rejects other users' useful links and non-http URLs", async () => {

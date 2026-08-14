@@ -387,9 +387,13 @@ export const usefulLinks = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    /**
+     * Null for global default rows seeded by the catalog (visible to every
+     * user); set for user-owned links.
+     */
+    userId: text("user_id").references(() => user.id, {
+      onDelete: "cascade",
+    }),
     title: text("title").notNull(),
     url: text("url").notNull(),
     description: text("description"),

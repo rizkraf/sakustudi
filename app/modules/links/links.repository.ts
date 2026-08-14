@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 
 import { getDb } from "~/lib/db/client";
 import { usefulLinks } from "~/lib/db/schema";
@@ -16,18 +16,22 @@ export type UsefulLinkInsert = {
 };
 
 /**
- * Links for the user, scoped to a course when courseId is given; otherwise
- * every link the user owns (course-specific and global alike). Ordered by
- * the stable position field, then title.
+ * Links for the user: user-owned rows (scoped to a course when courseId is
+ * given) plus the global UT defaults seeded with a null user_id, which are
+ * visible to everyone. Ordered by the stable position field, then title.
  */
 export async function listUsefulLinks(
   userId: string,
   courseId?: string | null,
 ): Promise<UsefulLinkRow[]> {
-  const where =
+  const userScoped =
     courseId === undefined || courseId === null
       ? eq(usefulLinks.userId, userId)
       : and(eq(usefulLinks.userId, userId), eq(usefulLinks.courseId, courseId));
+  const where = or(
+    userScoped,
+    and(isNull(usefulLinks.userId), isNull(usefulLinks.courseId)),
+  );
   return db
     .select()
     .from(usefulLinks)

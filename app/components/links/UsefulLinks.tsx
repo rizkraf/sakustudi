@@ -77,13 +77,18 @@ export function UsefulLinks({
                 {link.description && (
                   <p className="mt-0.5 text-sm text-muted">{link.description}</p>
                 )}
+                {link.category && (
+                  <p className="mt-0.5 text-xs text-muted">#{link.category}</p>
+                )}
               </div>
-              <Form method="post" className="shrink-0">
-                <input type="hidden" name="intent" value="delete-link" />
-                <input type="hidden" name="linkId" value={link.id} />
-                <input type="hidden" name="csrfToken" value={csrfToken} />
-                <DeleteButton />
-              </Form>
+              {link.userId && (
+                <Form method="post" className="shrink-0">
+                  <input type="hidden" name="intent" value="delete-link" />
+                  <input type="hidden" name="linkId" value={link.id} />
+                  <input type="hidden" name="csrfToken" value={csrfToken} />
+                  <DeleteButton />
+                </Form>
+              )}
             </li>
           ))}
         </ul>

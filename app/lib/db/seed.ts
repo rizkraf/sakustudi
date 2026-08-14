@@ -1,6 +1,6 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { AppSchema } from "./schema";
-import { courseCatalog, studyPrograms } from "./schema";
+import { courseCatalog, studyPrograms, usefulLinks } from "./schema";
 
 export const CATALOG_SEED_VERSION = 1;
 
@@ -19,6 +19,41 @@ const SEED_PROGRAMS = [
     code: "MK",
     name: "Manajemen",
     description: "Universitas Terbuka - Program Studi Manajemen",
+  },
+];
+
+const SEED_USEFUL_LINKS = [
+  {
+    id: "c0000000-0000-4000-8000-000000000001",
+    title: "Elearning UT",
+    url: "https://elearning.ut.ac.id/",
+    description: "LMS resmi UT untuk materi dan tugas mata kuliah",
+    category: "elearning",
+    position: 0,
+  },
+  {
+    id: "c0000000-0000-4000-8000-000000000002",
+    title: "SIAS UT",
+    url: "https://sias.ut.ac.id/",
+    description: "Sistem Informasi Akademik Terpadu: KRS, KHS, wisuda",
+    category: "administrasi",
+    position: 1,
+  },
+  {
+    id: "c0000000-0000-4000-8000-000000000003",
+    title: "Pustaka UT",
+    url: "https://pustaka.ut.ac.id/",
+    description: "Perpustakaan digital UT: buku, jurnal, dan repositori",
+    category: "pustaka",
+    position: 2,
+  },
+  {
+    id: "c0000000-0000-4000-8000-000000000004",
+    title: "Layanan & Bantuan UT",
+    url: "https://layanan.ut.ac.id/",
+    description: "Pusat layanan dan bantuan mahasiswa Universitas Terbuka",
+    category: "layanan",
+    position: 3,
   },
 ];
 
@@ -111,4 +146,9 @@ export async function seedCatalog(
   }));
 
   await db.insert(courseCatalog).values(courses).onConflictDoNothing();
+
+  await db
+    .insert(usefulLinks)
+    .values(SEED_USEFUL_LINKS.map((link) => ({ ...link, userId: null })))
+    .onConflictDoNothing();
 }

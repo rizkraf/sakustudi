@@ -15,6 +15,7 @@ import {
   calendarEvents,
   courseCatalog,
   studyPrograms,
+  usefulLinks,
 } from "~/lib/db/schema";
 
 const db = getDb();
@@ -210,9 +211,14 @@ describe("db schema", () => {
 
     const programRows = await db.select().from(studyPrograms);
     const courseRows = await db.select().from(courseCatalog);
+    const globalLinkRows = await db
+      .select()
+      .from(usefulLinks)
+      .where(sql`${usefulLinks.userId} is null`);
 
     const programCodes = new Set(programRows.map((p) => p.code));
     const courseCodes = new Set(courseRows.map((c) => c.code));
+    const linkIds = new Set(globalLinkRows.map((l) => l.id));
     const sourceVersion = String(CATALOG_SEED_VERSION);
 
     expect(programRows.length).toBe(programCodes.size);
@@ -221,6 +227,13 @@ describe("db schema", () => {
     expect(programCodes).toContain("SI");
     expect(programCodes).toContain("TI");
     expect(courseCodes).toContain("MKDU4111");
+
+    // Global UT defaults are user-agnostic (no user_id) and idempotent.
+    expect(globalLinkRows.length).toBe(linkIds.size);
+    expect(globalLinkRows.length).toBeGreaterThanOrEqual(4);
+    expect(globalLinkRows.map((l) => l.url)).toContain("https://elearning.ut.ac.id/");
+    expect(globalLinkRows.map((l) => l.url)).toContain("https://sias.ut.ac.id/");
+    expect(globalLinkRows.map((l) => l.category)).toContain("elearning");
 
     for (const program of programRows) {
       expect(program.sourceVersion).toBe(sourceVersion);
