@@ -2,7 +2,7 @@ import { type RouteConfig, index, route } from "@react-router/dev/routes";
 
 export default [
   index("routes/home.tsx"),
-  route("dashboard", "routes/home.tsx", { id: "routes/dashboard" }),
+  route("dashboard", "routes/dashboard.tsx"),
   route("healthz", "routes/healthz.ts"),
   route("api/auth/*", "routes/api.auth.ts"),
   route("register", "routes/register.tsx"),
@@ -14,4 +14,9 @@ export default [
   route("onboarding", "routes/onboarding.tsx"),
   route("academic-terms", "routes/academic-terms._index.tsx"),
   route("academic-terms/:termId", "routes/academic-terms.$termId.tsx"),
+  route("activities", "routes/activities._index.tsx"),
+  route("activities/new", "routes/activities.new.tsx"),
+  route("activities/:activityId", "routes/activities.$activityId.tsx"),
+  route("activities/:activityId/edit", "routes/activities.$activityId.edit.tsx"),
+  route("courses/:courseId", "routes/courses.$courseId.tsx"),
 ] satisfies RouteConfig;
