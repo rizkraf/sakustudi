@@ -149,6 +149,20 @@ export default function ActivityDetail({ loaderData }: Route.ComponentProps) {
           </section>
         )}
 
+        {activity.link && (
+          <section className="mt-6 rounded-card border border-border bg-surface p-6">
+            <h2 className="text-sm font-semibold">Link</h2>
+            <a
+              href={activity.link}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="mt-2 inline-block max-w-full break-all text-sm font-medium text-ink underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus hover:text-muted"
+            >
+              {activity.link}
+            </a>
+          </section>
+        )}
+
         <section className="mt-6 rounded-card border border-border bg-surface p-6">
           <h2 className="text-sm font-semibold">Status</h2>
           <div className="mt-3 flex flex-wrap gap-3">

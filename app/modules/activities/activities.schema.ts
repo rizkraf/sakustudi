@@ -50,6 +50,32 @@ export const createActivitySchema = z.object({
     .optional()
     .transform((value) => (value === undefined || value === "" ? undefined : value))
     .optional(),
+  /**
+   * Optional external reference. Empty input clears the link (null);
+   * omitted input leaves it untouched by partial updates. Only http(s)
+   * links are accepted: the value is rendered as a clickable href, and
+   * zod's url() check alone admits javascript:/data: URLs.
+   *
+   * Null is accepted on input because services re-validate their own
+   * transform output (empty string already became null on the first pass).
+   */
+  link: z
+    .union([z.string().trim().max(2048, "Link must be 2048 characters or fewer."), z.null()])
+    .optional()
+    .transform((value) =>
+      value === undefined ? undefined : value === "" ? null : value,
+    )
+    .pipe(
+      z
+        .string()
+        .url("Link must be a valid URL.")
+        .refine(
+          (value) => /^https?:\/\//i.test(value),
+          "Link must start with http:// or https://.",
+        )
+        .nullable(),
+    )
+    .optional(),
 });
 
 export type CreateActivityInput = z.infer<typeof createActivitySchema>;

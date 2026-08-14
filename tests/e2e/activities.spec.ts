@@ -68,6 +68,7 @@ test("a user creates, edits, completes, reopens, and sees activities on the dash
   await expect(page).toHaveURL(/\/edit$/);
   await page.getByLabel("Title").fill("Tugas 1: struktur (revisi)");
   await page.getByLabel("Deadline").fill(daysFromNow(-2));
+  await page.getByLabel("Link (optional)").fill("https://example.com/tugas-1");
   await page.getByRole("button", { name: "Save changes" }).click();
 
   await expect(page).toHaveURL(/\/activities\/[^/]+$/);
@@ -75,6 +76,9 @@ test("a user creates, edits, completes, reopens, and sees activities on the dash
     page.getByRole("heading", { name: "Tugas 1: struktur (revisi)" }),
   ).toBeVisible();
   await expect(page.getByText("Overdue", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "https://example.com/tugas-1" }),
+  ).toBeVisible();
 
   // The dashboard now lists it as overdue.
   await page.goto("/dashboard");

@@ -101,6 +101,7 @@ describe("courses, activities, progress, and dashboard integration", () => {
       type: "assignment",
       deadline: "2026-10-01",
       details: "Kerjakan soal 1-5",
+      link: "https://elearning.ut.ac.id/mod/assign/view.php?id=7",
     });
 
     expect(activity).toMatchObject({
@@ -111,8 +112,39 @@ describe("courses, activities, progress, and dashboard integration", () => {
       status: "pending",
       completedAt: null,
       details: "Kerjakan soal 1-5",
+      link: "https://elearning.ut.ac.id/mod/assign/view.php?id=7",
     });
     expect(activity.dueDate?.toISOString()).toBe("2026-10-01T16:59:59.000Z");
+  });
+
+  it("clears an activity link on update and leaves it untouched when omitted", async () => {
+    const { userId, courseId } = await createUserWithTermAndCourse();
+    const activity = await createActivity(userId, {
+      title: "With link",
+      courseId,
+      type: "assignment",
+      deadline: "2026-10-01",
+      link: "https://example.com/materi",
+    });
+    expect(activity.link).toBe("https://example.com/materi");
+
+    const kept = await updateActivity(userId, activity.id, { title: "Renamed" });
+    expect(kept.link).toBe("https://example.com/materi");
+
+    const cleared = await updateActivity(userId, activity.id, { link: "" });
+    expect(cleared.link).toBeNull();
+  });
+
+  it("accepts an empty link at create time, surviving service re-validation", async () => {
+    const { userId, courseId } = await createUserWithTermAndCourse();
+    const activity = await createActivity(userId, {
+      title: "No link",
+      courseId,
+      type: "assignment",
+      deadline: "2026-10-01",
+      link: "",
+    });
+    expect(activity.link).toBeNull();
   });
 
   it("rejects creating an activity in another user's course", async () => {

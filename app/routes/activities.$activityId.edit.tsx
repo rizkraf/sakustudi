@@ -115,6 +115,7 @@ export default function EditActivity({ loaderData }: Route.ComponentProps) {
               courseId: activity.courseId,
               deadline: activity.dueDate,
               details: activity.details,
+              link: activity.link,
             }}
           />
         </section>

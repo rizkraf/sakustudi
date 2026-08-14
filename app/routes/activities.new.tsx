@@ -141,6 +141,7 @@ export default function NewActivity({ loaderData }: Route.ComponentProps) {
                         courseId: loaderData.preselectCourseId,
                         deadline: null,
                         details: null,
+                        link: null,
                       }
                     : undefined
                 }

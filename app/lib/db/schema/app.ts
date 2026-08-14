@@ -253,6 +253,7 @@ export const activities = pgTable(
     status: activityStatus("status").notNull().default("pending"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     details: text("details"),
+    link: text("link"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

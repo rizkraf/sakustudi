@@ -33,6 +33,7 @@ export type ActivityInsert = {
   type: ActivityType;
   dueDate: Date;
   details: string | null;
+  link: string | null;
 };
 
 export type ActivityUpdate = {
@@ -42,6 +43,7 @@ export type ActivityUpdate = {
   type?: ActivityType;
   dueDate?: Date | null;
   details?: string | null;
+  link?: string | null;
 };
 
 const activityWithCourse = {
@@ -55,6 +57,7 @@ const activityWithCourse = {
   status: activities.status,
   completedAt: activities.completedAt,
   details: activities.details,
+  link: activities.link,
   createdAt: activities.createdAt,
   updatedAt: activities.updatedAt,
   courseName: courses.name,
@@ -87,6 +90,7 @@ export async function insertActivity(
       type: input.type,
       dueDate: input.dueDate,
       details: input.details,
+      link: input.link,
     })
     .returning();
   return row;

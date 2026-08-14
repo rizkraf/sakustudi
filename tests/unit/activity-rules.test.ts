@@ -159,9 +159,38 @@ describe("activity schema validation", () => {
     ).toBe(false);
   });
 
+  it("accepts a valid link", () => {
+    const parsed = createActivitySchema.parse({
+      ...valid,
+      link: " https://elearning.ut.ac.id/course/view.php?id=1 ",
+    });
+    expect(parsed.link).toBe("https://elearning.ut.ac.id/course/view.php?id=1");
+  });
+
+  it("rejects an invalid link", () => {
+    expect(createActivitySchema.safeParse({ ...valid, link: "not-a-url" }).success).toBe(
+      false,
+    );
+    expect(createActivitySchema.safeParse({ ...valid, link: "javascript:alert(1)" }).success).toBe(
+      false,
+    );
+  });
+
+  it("clears a link with an empty value and omits it when absent", () => {
+    expect(createActivitySchema.parse({ ...valid, link: "" }).link).toBeNull();
+    expect(createActivitySchema.parse(valid).link).toBeUndefined();
+  });
+
+  it("round-trips null, which services re-validate after their own transform", () => {
+    const once = createActivitySchema.parse({ ...valid, link: "" });
+    expect(once.link).toBeNull();
+    expect(createActivitySchema.parse({ ...valid, link: once.link }).link).toBeNull();
+  });
+
   it("allows partial updates", () => {
     const parsed = updateActivitySchema.parse({ title: "Renamed" });
     expect(parsed).toEqual({ title: "Renamed" });
     expect(updateActivitySchema.safeParse({}).success).toBe(true);
+    expect(updateActivitySchema.parse({ link: "" }).link).toBeNull();
   });
 });

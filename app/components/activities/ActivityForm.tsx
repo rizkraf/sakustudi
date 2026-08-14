@@ -15,6 +15,7 @@ export type ActivityFormDefaults = {
   courseId: string | null;
   deadline: Date | null;
   details: string | null;
+  link: string | null;
 };
 
 function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: string }) {
@@ -157,6 +158,22 @@ export function ActivityForm({
           className={inputClass}
         />
         <FieldError field="details" actionData={actionData} />
+      </label>
+
+      <label className="block">
+        <span className="text-sm font-medium">Link (optional)</span>
+        <input
+          name="link"
+          type="url"
+          inputMode="url"
+          placeholder="https://…"
+          defaultValue={defaults?.link ?? ""}
+          className={inputClass}
+        />
+        <FieldError field="link" actionData={actionData} />
+        <span className="mt-1 block text-xs text-muted">
+          Reference material for this activity, e.g. a tutorial or upload link.
+        </span>
       </label>
 
       <SubmitButton label={submitLabel} pendingLabel={pendingLabel} />

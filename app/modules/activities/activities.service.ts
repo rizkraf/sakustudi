@@ -67,6 +67,7 @@ export async function createActivity(
     type: parsed.data.type,
     dueDate: parseDeadlineInput(parsed.data.deadline),
     details: parsed.data.details ?? null,
+    link: parsed.data.link ?? null,
   });
 }
 
@@ -114,6 +115,8 @@ export async function updateActivity(
       parsed.data.details !== undefined
         ? (parsed.data.details ?? null)
         : existing.details,
+    link:
+      parsed.data.link !== undefined ? (parsed.data.link ?? null) : existing.link,
     courseId,
     termId,
   });
