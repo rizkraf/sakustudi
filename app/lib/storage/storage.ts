@@ -55,6 +55,16 @@ export type ListableStorage = FileStorage & {
 };
 
 /**
+ * Storage adapters that can re-compute an object's sha256 for
+ * download-time integrity verification (local driver). The S3 adapter does
+ * not implement this: S3 persists checksums server-side, and relying on
+ * adapter-reported hashes for user data is optional per spec.
+ */
+export type ChecksumStorage = FileStorage & {
+  checksum(key: string): Promise<string>;
+};
+
+/**
  * Result of server-side upload validation: everything the repository row
  * needs plus the bytes ready for storage.put. `buffer` stays server-side and
  * is never exposed to the browser.

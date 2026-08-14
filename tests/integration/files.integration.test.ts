@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
-import { stat } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { stat, writeFile } from "node:fs/promises";
 import { mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -21,6 +21,7 @@ import {
   findOrphanObjects,
   resolveStorage,
   validateUpload,
+  type ChecksumStorage,
   type ListableStorage,
 } from "~/lib/storage/storage";
 import { user } from "~/lib/db/schema";
@@ -152,6 +153,7 @@ describe("private file storage integration", () => {
     expect(attachment.filename).toBe("lecture-notes.pdf");
     expect(attachment.mimeType).toBe("application/pdf");
     expect(attachment.sizeBytes).toBe(PDF_BYTES.byteLength);
+    expect(attachment.checksum).toBe(createHash("sha256").update(PDF_BYTES).digest("hex"));
     expect(attachment.storageKey).not.toContain("lecture-notes");
     expect(attachment.storageKey).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
@@ -184,6 +186,31 @@ describe("private file storage integration", () => {
 
     const body = Buffer.from(await response.arrayBuffer());
     expect(body.equals(PDF_BYTES)).toBe(true);
+  });
+
+  it("refuses to download an object whose checksum no longer matches", async () => {
+    const { userId, noteId } = await createUserWithParents();
+    const attachment = await createAttachment(userId, { kind: "note", id: noteId }, pdfFile());
+
+    // Tamper with the stored object after insert: the metadata checksum no
+    // longer matches the bytes on disk, so the download must fail even though
+    // the object exists and the user owns the row.
+    const tampered = Buffer.concat([PDF_BYTES, Buffer.from("tampered")]);
+    await writeFile(join(TEST_STORAGE_ROOT, attachment.storageKey), tampered);
+
+    const storage = (await resolveStorage()) as ChecksumStorage;
+    expect(await storage.checksum(attachment.storageKey)).not.toBe(attachment.checksum);
+
+    const error = expectAppError(
+      await downloadAttachment(userId, attachment.id).catch((caught) => caught),
+      "NOT_FOUND",
+    );
+    expect(error.message).toContain("damaged");
+
+    // The corrupted attachment can still be deleted; deletion is unaffected
+    // by the integrity check.
+    await deleteAttachment(userId, attachment.id);
+    expect(await listParentAttachments(userId, { kind: "note", id: noteId })).toHaveLength(0);
   });
 
   it("lists attachments scoped to their parent", async () => {

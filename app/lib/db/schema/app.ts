@@ -351,6 +351,7 @@ export const attachments = pgTable(
     storageKey: text("storage_key").notNull(),
     mimeType: text("mime_type"),
     sizeBytes: integer("size_bytes"),
+    checksum: text("checksum"),
     courseId: text("course_id").references(() => courses.id, {
       onDelete: "cascade",
     }),

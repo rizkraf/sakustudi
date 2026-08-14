@@ -43,6 +43,13 @@
       "when": 1786731660953,
       "tag": "0005_faithful_alex_power",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786733349889,
+      "tag": "0006_add-attachment-checksum",
+      "breakpoints": true
     }
   ]
 }

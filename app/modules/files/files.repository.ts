@@ -18,6 +18,7 @@ export type AttachmentInsert = {
   storageKey: string;
   mimeType: string;
   sizeBytes: number;
+  checksum: string;
 };
 
 function parentCondition(parent: AttachmentParent): SQL {
@@ -44,6 +45,7 @@ export async function insertAttachment(
       storageKey: input.storageKey,
       mimeType: input.mimeType,
       sizeBytes: input.sizeBytes,
+      checksum: input.checksum,
       noteId: parent.kind === "note" ? parent.id : null,
       activityId: parent.kind === "activity" ? parent.id : null,
     })

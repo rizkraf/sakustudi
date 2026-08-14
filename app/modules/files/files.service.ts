@@ -5,6 +5,8 @@ import {
   maxStorageBytes,
   resolveStorage,
   validateUpload,
+  type ChecksumStorage,
+  type FileStorage,
   type ListableStorage,
 } from "~/lib/storage/storage";
 import { findOwnedActivity } from "~/modules/activities/activities.repository";
@@ -72,6 +74,7 @@ export async function createAttachment(
       storageKey: stored.key,
       mimeType: validated.mimeType,
       sizeBytes: stored.size,
+      checksum: stored.checksum,
     });
   } catch (error) {
     // The object landed but the metadata write failed: remove the object so
@@ -96,6 +99,7 @@ export async function downloadAttachment(
   }
 
   const storage = await resolveStorage();
+  await verifyStoredChecksum(row, storage);
   let stream: ReadableStream;
   try {
     stream = await storage.get(row.storageKey);
@@ -177,6 +181,37 @@ function isObjectMissing(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
   const candidate = error as { code?: string; name?: string };
   return candidate.code === "ENOENT" || candidate.name === "NoSuchKey";
+}
+
+/**
+ * Download-time integrity check. Rows created before checksums existed (or
+ * adapters without checksum support) skip verification; otherwise the stored
+ * object's re-computed sha256 must match the persisted metadata checksum or
+ * the download is refused as damaged.
+ */
+async function verifyStoredChecksum(
+  row: AttachmentRow,
+  storage: FileStorage,
+): Promise<void> {
+  if (!row.checksum) return;
+  const verifiable = storage as Partial<ChecksumStorage>;
+  if (typeof verifiable.checksum !== "function") return;
+
+  let actual: string;
+  try {
+    actual = await verifiable.checksum(row.storageKey);
+  } catch (error) {
+    if (isObjectMissing(error)) {
+      throw new AppError("NOT_FOUND", "The stored file is missing.");
+    }
+    throw error;
+  }
+  if (actual !== row.checksum) {
+    throw new AppError(
+      "NOT_FOUND",
+      "The stored file is damaged and cannot be downloaded.",
+    );
+  }
 }
 
 /**

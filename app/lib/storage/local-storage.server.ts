@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { mkdir, readdir, stat, unlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -96,6 +97,24 @@ export class LocalFileStorage implements FileStorage {
       if (isNoSuchFile(error)) return false;
       throw error;
     }
+  }
+
+  /**
+   * sha256 (hex) of the stored object, streamed in constant memory.
+   * Download-time integrity verification compares this against the
+   * checksum persisted in the attachment metadata row. Missing files
+   * reject with ENOENT, matching `get` semantics.
+   */
+  async checksum(key: string): Promise<string> {
+    const target = this.pathFor(key);
+    const hash = createHash("sha256");
+    await new Promise<void>((resolvePromise, rejectPromise) => {
+      const stream = createReadStream(target);
+      stream.on("data", (chunk) => hash.update(chunk));
+      stream.on("error", rejectPromise);
+      stream.on("end", () => resolvePromise());
+    });
+    return hash.digest("hex");
   }
 
   async listKeys(): Promise<string[]> {
