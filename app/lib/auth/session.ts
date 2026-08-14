@@ -1,5 +1,6 @@
 import { redirect, type MiddlewareFunction } from "react-router";
 import { sessionUserContext } from "~/context";
+import { setRequestUserId } from "~/lib/request/request-id.server";
 import { getMissingConsents } from "~/modules/auth/consent.server";
 
 export type SessionUser = {
@@ -46,6 +47,7 @@ export const requireUserMiddleware: MiddlewareFunction<Response> = async ({
     throw redirect("/login");
   }
   context.set(sessionUserContext, user);
+  setRequestUserId(user.id);
 };
 
 /**
