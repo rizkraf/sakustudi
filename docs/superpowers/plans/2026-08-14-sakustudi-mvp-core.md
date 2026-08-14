@@ -118,7 +118,7 @@ Keep the generated React Router commands and expose these scripts:
   "scripts": {
     "dev": "react-router dev",
     "build": "react-router build",
-    "start": "react-router-serve ./build/server/index.js",
+    "start": "node ./build/server/index.js",
     "typecheck": "react-router typegen && tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
