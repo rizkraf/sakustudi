@@ -10,7 +10,8 @@ Sakustudi MVP Core is a self-hosted, mobile-first academic dashboard for
 Universitas Terbuka students. It helps users manage semesters, courses,
 activities, notes, private files, calendar events, and deadline reminders.
 
-The application is a TypeScript modular monolith. React Router v7 Framework
+The application is a TypeScript modular monolith. React Router (current stable,
+v8) Framework
 Mode serves the web application and SSR through Node.js. PostgreSQL is the
 system of record. BullMQ and Redis process reminders and email asynchronously.
 The core has no billing, AI, admin dashboard, or direct UT integration.
@@ -65,7 +66,7 @@ The core has no billing, AI, admin dashboard, or direct UT integration.
 Browser
   |
   v
-React Router v7 Framework Mode / Node.js
+React Router Framework Mode (v8) / Node.js
   |-- route loaders: authenticated reads
   |-- route actions: validated mutations
   |-- auth handler: Better Auth
@@ -102,7 +103,7 @@ passes through server-side loaders, actions, or handlers.
 
 ### Web
 
-- React Router v7 Framework Mode.
+- React Router Framework Mode, current stable release (v8).
 - Vite build pipeline.
 - TypeScript with strict checking.
 - Node.js runtime and custom server deployment.

@@ -4,9 +4,9 @@
 
 **Goal:** Build a self-hosted, mobile-first Sakustudi MVP Core for UT students with authentication, onboarding, academic tracking, notes, private files, calendar events, reminders, export, and account deletion.
 
-**Architecture:** Use a React Router v7 Framework Mode modular monolith. Route loaders/actions call authenticated domain services, Drizzle persists to PostgreSQL, and a separate BullMQ worker uses Redis for reminder, email, export, and cleanup jobs. PostgreSQL remains source of truth; an outbox protects publication to Redis.
+**Architecture:** Use a React Router Framework Mode (v8) modular monolith. Route loaders/actions call authenticated domain services, Drizzle persists to PostgreSQL, and a separate BullMQ worker uses Redis for reminder, email, export, and cleanup jobs. PostgreSQL remains source of truth; an outbox protects publication to Redis.
 
-**Tech Stack:** React Router v7, Vite, React, TypeScript, Tailwind CSS v4, Node.js, PostgreSQL, Drizzle ORM, Better Auth, BullMQ, Redis, Tiptap StarterKit, sanitize-html, Zod, vite-plugin-pwa, Vitest, Playwright, Docker Compose.
+**Tech Stack:** React Router (v8), Vite, React, TypeScript, Tailwind CSS v4, Node.js, PostgreSQL, Drizzle ORM, Better Auth, BullMQ, Redis, Tiptap StarterKit, sanitize-html, Zod, vite-plugin-pwa, Vitest, Playwright, Docker Compose.
 
 ## Global Constraints
 
@@ -118,7 +118,7 @@ Keep the generated React Router commands and expose these scripts:
   "scripts": {
     "dev": "react-router dev",
     "build": "react-router build",
-    "start": "node ./build/server/index.js",
+    "start": "node server.js",
     "typecheck": "react-router typegen && tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
