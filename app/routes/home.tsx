@@ -1,4 +1,4 @@
-import { Alarm, Calendar, DashboardSpeed, DownloadSquare, LockSquare, Notes } from "iconoir-react";
+import { Alarm, Calendar, DashboardSpeed, DownloadSquare, Github, LockSquare, Notes, Star } from "iconoir-react";
 
 import type { Route } from "./+types/home";
 
@@ -17,14 +17,52 @@ export function meta() {
   ];
 }
 
-export function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
-  return { deleted: url.searchParams.get("deleted") === "1" };
+  const stars = await fetchRepoStars();
+  return { deleted: url.searchParams.get("deleted") === "1", stars };
+}
+
+const REPO_URL = "https://github.com/rizkraf/sakustudi";
+const DOCS_URL = "https://github.com/rizkraf/sakustudi/blob/main/README.md";
+const GITHUB_API_URL = "https://api.github.com/repos/rizkraf/sakustudi";
+const STARS_CACHE_TTL_MS = 60 * 60 * 1000;
+
+let cachedStars: { value: number | null; at: number } | null = null;
+
+/**
+ * Reads the repository star count server-side with a one-hour in-process
+ * cache. Fails open: any error (network, GitHub API) yields null and the
+ * hero hides the badge instead of breaking the page.
+ */
+async function fetchRepoStars(): Promise<number | null> {
+  const now = Date.now();
+  if (cachedStars && now - cachedStars.at < STARS_CACHE_TTL_MS) {
+    return cachedStars.value;
+  }
+  try {
+    const response = await fetch(GITHUB_API_URL, {
+      headers: { Accept: "application/vnd.github+json" },
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!response.ok) {
+      cachedStars = { value: null, at: now };
+      return null;
+    }
+    const data = (await response.json()) as { stargazers_count?: number };
+    const value = typeof data.stargazers_count === "number" ? data.stargazers_count : null;
+    cachedStars = { value, at: now };
+    return value;
+  } catch {
+    cachedStars = { value: null, at: now };
+    return null;
+  }
 }
 
 const NAV_LINKS = [
   { href: "#fitur", label: "Fitur" },
   { href: "#cara-kerja", label: "Cara kerja" },
+  { href: "#self-host", label: "Self-host" },
   { href: "#faq", label: "FAQ" },
 ] as const;
 
@@ -95,6 +133,24 @@ const HERO_TRUST_POINTS = ["Data privat", "Bisa diekspor", "Bisa di-host sendiri
 
 const TRUST_POINTS = ["Self-hosted (Docker Compose)", "Open source", "Privat & dapat diekspor", "Tanpa iklan"] as const;
 
+const SELF_HOST_STEPS = [
+  {
+    title: "Jalankan database",
+    body: "PostgreSQL dan Redis sebagai fondasi layanan.",
+    command: "docker compose up -d postgres redis",
+  },
+  {
+    title: "Migrasi schema",
+    body: "Terapkan schema database sekali saja.",
+    command: "docker compose --profile tools run --rm migrate",
+  },
+  {
+    title: "Nyalakan aplikasi",
+    body: "Web dan worker berjalan di container masing-masing.",
+    command: "docker compose up -d",
+  },
+] as const;
+
 const FAQS = [
   {
     question: "Apakah Sakustudi produk resmi Universitas Terbuka?",
@@ -114,6 +170,16 @@ const FAQS = [
     question: "Bagaimana kalau saya menghapus akun?",
     answer:
       "Data kamu dihapus atau dihilangkan identitasnya. Sebelum menghapus, kamu bisa mengekspor seluruh data terlebih dahulu.",
+  },
+  {
+    question: "Apakah Sakustudi harus di-host sendiri?",
+    answer:
+      "Untuk sekarang, Sakustudi dirancang untuk dijalankan sendiri (self-host) dengan Docker Compose — data sepenuhnya milikmu. Layanan terkelola sedang direncanakan untuk masa depan.",
+  },
+  {
+    question: "Bagaimana cara berkontribusi?",
+    answer:
+      "Sakustudi open source. Laporkan masalah, ajukan permintaan fitur, atau kirim pull request — panduannya ada di CONTRIBUTING.",
   },
 ] as const;
 
@@ -137,6 +203,15 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             ))}
           </nav>
           <nav className="flex items-center gap-3 text-sm" aria-label="Account">
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Repository GitHub"
+              className="pressable inline-flex size-11 items-center justify-center rounded-control border border-border bg-surface text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              <Github className="size-5" />
+            </a>
             <a
               href="/login"
               className="pressable inline-flex min-h-11 items-center rounded-control border border-border bg-surface px-4 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
@@ -197,6 +272,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                   {point}
                 </li>
               ))}
+              <li>
+                <GitHubStars stars={loaderData.stars} />
+              </li>
             </ul>
           </div>
 
@@ -276,6 +354,38 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
+      <section id="self-host" className="mx-auto w-full max-w-4xl scroll-mt-20 px-6 py-16">
+        <h2 className="text-center text-2xl font-bold tracking-tight">
+          Self-host, data sepenuhnya milikmu
+        </h2>
+        <p className="mx-auto mt-3 max-w-xl text-center text-sm text-muted">
+          Sakustudi open source. Jalankan di server sendiri dengan Docker
+          Compose — tanpa perantara, tanpa iklan.
+        </p>
+        <ol className="mt-8 grid gap-4 sm:grid-cols-3">
+          {SELF_HOST_STEPS.map((step, index) => (
+            <li key={step.title} className="flex flex-col rounded-card border border-border bg-surface p-5">
+              <span className="text-xs font-semibold text-muted">Langkah {index + 1}</span>
+              <h3 className="mt-1 text-sm font-semibold">{step.title}</h3>
+              <p className="mt-2 text-sm text-muted">{step.body}</p>
+              <pre className="mt-3 overflow-x-auto rounded-control bg-canvas px-3 py-2 text-xs">
+                <code>{step.command}</code>
+              </pre>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-6 text-center text-sm">
+          <a
+            className="inline-flex min-h-11 items-center font-medium underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            href={DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Panduan lengkap di README
+          </a>
+        </p>
+      </section>
+
       <section className="mx-auto w-full max-w-4xl px-6 py-16">
         <h2 className="text-center text-2xl font-bold tracking-tight">Data kamu, kendali kamu</h2>
         <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2">
@@ -285,6 +395,16 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             </li>
           ))}
         </ul>
+        <p className="mt-4 text-center text-sm">
+          <a
+            className="inline-flex min-h-11 items-center font-medium underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            href={REPO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Lihat kode sumber di GitHub
+          </a>
+        </p>
       </section>
 
       <section id="faq" className="scroll-mt-20 border-t border-border bg-surface">
@@ -321,6 +441,24 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <p className="mt-2">
           <a
             className="inline-flex min-h-11 items-center underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            href={REPO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            GitHub
+          </a>
+          {" · "}
+          <a
+            className="inline-flex min-h-11 items-center underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            href={DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Dokumentasi
+          </a>
+          {" · "}
+          <a
+            className="inline-flex min-h-11 items-center underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             href="/legal/terms"
           >
             Terms of Service
@@ -349,5 +487,21 @@ function CourseProgress({ name, percent }: { name: string; percent: number }) {
         <div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} />
       </div>
     </div>
+  );
+}
+
+function GitHubStars({ stars }: { stars: number | null | undefined }) {
+  if (stars === null || stars === undefined || stars === 0) return null;
+
+  return (
+    <a
+      href={REPO_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 rounded-control bg-primary/15 px-3 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+    >
+      <Star aria-hidden="true" className="size-3" />
+      {stars.toLocaleString("id-ID")} bintang di GitHub
+    </a>
   );
 }
