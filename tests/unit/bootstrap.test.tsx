@@ -5,19 +5,22 @@ import { describe, expect, it } from "vitest";
 import Home from "../../app/routes/home";
 
 const HomeRoute = Home as unknown as (props: {
-  loaderData: { message: string };
+  loaderData: { deleted: boolean };
 }) => React.JSX.Element;
 
 describe("bootstrap", () => {
-  it("renders the generated home route", () => {
+  it("renders the public landing page", () => {
     render(
       <MemoryRouter>
-        <HomeRoute loaderData={{ message: "Hello from Express" }} />
+        <HomeRoute loaderData={{ deleted: false }} />
       </MemoryRouter>,
     );
 
     expect(
       screen.getByRole("heading", { level: 1 }),
-    ).toHaveTextContent("Hello from Express");
+    ).toHaveTextContent("Semester kamu, jelas dalam satu tempat");
+    expect(
+      screen.getByRole("link", { name: "Daftar" }),
+    ).toHaveAttribute("href", "/register");
   });
 });

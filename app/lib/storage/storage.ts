@@ -49,6 +49,15 @@ export interface FileStorage {
   exists(key: string): Promise<boolean>;
 }
 
+/**
+ * Optional last-modified lookup. Local files back it with stat() mtime; S3
+ * uses HeadObject LastModified. The orphan sweep uses it to enforce a grace
+ * period so freshly uploaded objects are never treated as orphans.
+ */
+export type ModifiableStorage = FileStorage & {
+  modifiedAt(key: string): Promise<Date | null>;
+};
+
 /** Storage adapters that can enumerate every stored key for orphan cleanup. */
 export type ListableStorage = FileStorage & {
   listKeys(): Promise<string[]>;
@@ -239,17 +248,33 @@ export function resetStorage(): void {
   cachedStorage = null;
 }
 
+/** Default orphan grace period: objects younger than this are never deleted. */
+export const ORPHAN_GRACE_MS = 60 * 60 * 1000;
+
 /**
  * Orphan detection for the cleanup worker: storage keys with no matching
- * attachment metadata row. Objects land in storage before their row (and the
- * row is deleted before the object on removal), so crashed uploads/deletes
- * leave orphans that this helper finds after a grace period.
+ * metadata row (attachment or export). Objects land in storage before their
+ * row (and the row is deleted before the object on removal), so crashed
+ * uploads/deletes leave orphans. A grace period protects in-flight uploads
+ * and finished export files from being swept moments after creation.
  */
 export async function findOrphanObjects(
   storage: ListableStorage,
   knownKeys: string[],
+  graceMs = ORPHAN_GRACE_MS,
 ): Promise<string[]> {
   const known = new Set(knownKeys);
   const keys = await storage.listKeys();
-  return keys.filter((key) => !known.has(key));
+  const modifiable = storage as Partial<ModifiableStorage>;
+  const now = Date.now();
+  const orphans: string[] = [];
+  for (const key of keys) {
+    if (known.has(key)) continue;
+    if (typeof modifiable.modifiedAt === "function") {
+      const modifiedAt = await modifiable.modifiedAt(key).catch(() => null);
+      if (modifiedAt && now - modifiedAt.getTime() < graceMs) continue;
+    }
+    orphans.push(key);
+  }
+  return orphans;
 }

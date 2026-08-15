@@ -17,6 +17,10 @@ import {
 } from "~/lib/auth/session";
 import { sessionUserContext } from "~/context";
 import {
+  createCsrfToken,
+  CSRF_COOKIE_NAME,
+} from "~/lib/request/security.server";
+import {
   createInMemoryMailer,
   setMailAdapter,
 } from "~/lib/mail/mailer";
@@ -387,13 +391,18 @@ describe("better auth + legal consent integration", () => {
 
     expect(await countConsentRows(userId)).toBe(0);
 
+    const token = createCsrfToken(userId);
     const formData = new FormData();
     formData.set("acceptTerms", "on");
     formData.set("acceptPrivacy", "on");
     formData.set("next", "/notes?tab=1");
+    formData.set("csrfToken", token);
     const request = new Request("http://localhost:3000/legal/terms", {
       method: "POST",
-      headers: new Headers({ Cookie: cookie }),
+      headers: new Headers({
+        Cookie: `${cookie}; ${CSRF_COOKIE_NAME}=${token}`,
+        Origin: "http://localhost:3000",
+      }),
       body: formData,
     });
 
@@ -426,11 +435,16 @@ describe("better auth + legal consent integration", () => {
     const { userId } = await createVerifiedUser("Partial Re-consent", email);
     const { cookie } = await signInAndGetCookie(email);
 
+    const token = createCsrfToken(userId);
     const formData = new FormData();
     formData.set("acceptTerms", "on");
+    formData.set("csrfToken", token);
     const request = new Request("http://localhost:3000/legal/terms", {
       method: "POST",
-      headers: new Headers({ Cookie: cookie }),
+      headers: new Headers({
+        Cookie: `${cookie}; ${CSRF_COOKIE_NAME}=${token}`,
+        Origin: "http://localhost:3000",
+      }),
       body: formData,
     });
 

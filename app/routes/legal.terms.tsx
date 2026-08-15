@@ -1,6 +1,17 @@
-import { data, Link, redirect, useSearchParams, Form } from "react-router";
+import { data, Link, redirect, Form } from "react-router";
 
-import { safeRedirectTarget, requireSessionUser } from "~/lib/auth/session";
+import { csrfTokenContext } from "~/context";
+import {
+  getSessionUser,
+  requireSessionUser,
+  requireUserMiddleware,
+  safeRedirectTarget,
+} from "~/lib/auth/session";
+import {
+  assertCsrfMutation,
+  createCsrfToken,
+  csrfCookieMiddleware,
+} from "~/lib/request/security.server";
 import { recordRequiredConsents } from "~/modules/auth/consent.server";
 import { LEGAL_DOCUMENT_VERSIONS, signUpConsentInputSchema } from "~/modules/auth/consent.schema";
 
@@ -14,13 +25,19 @@ export const meta: Route.MetaFunction = () => [
   { title: "Terms of Service | SakuStudi" },
 ];
 
+export const middleware: Route.MiddlewareFunction[] = [
+  requireUserMiddleware,
+  csrfCookieMiddleware,
+];
+
 export async function action({ request }: Route.ActionArgs) {
+  const user = await requireSessionUser(request);
+  await assertCsrfMutation(request, user.id);
+
   const formData = await request.formData();
   const acceptTerms = formData.get("acceptTerms") === "on";
   const acceptPrivacy = formData.get("acceptPrivacy") === "on";
   const next = String(formData.get("next") ?? "");
-
-  const user = await requireSessionUser(request);
 
   const consent = signUpConsentInputSchema.safeParse({
     acceptTerms,
@@ -37,10 +54,25 @@ export async function action({ request }: Route.ActionArgs) {
   throw redirect(safeRedirectTarget(next));
 }
 
-export default function TermsOfService({ actionData }: Route.ComponentProps) {
-  const [searchParams] = useSearchParams();
-  const consentRequired = searchParams.get("consent") === "required";
-  const next = searchParams.get("next") ?? "/";
+export async function loader({ request, context }: Route.LoaderArgs) {
+  const searchParams = new URL(request.url).searchParams;
+  const user = await getSessionUser(request);
+  return {
+    consentRequired: searchParams.get("consent") === "required",
+    next: searchParams.get("next") ?? "/",
+    csrfToken:
+      user === null
+        ? ""
+        : context.get(csrfTokenContext) || createCsrfToken(user.id),
+    hasUser: user !== null,
+  };
+}
+
+export default function TermsOfService({
+  actionData,
+  loaderData,
+}: Route.ComponentProps) {
+  const { consentRequired, next, csrfToken, hasUser } = loaderData;
 
   return (
     <main className="min-h-screen bg-canvas px-page py-12 text-ink">
@@ -50,7 +82,7 @@ export default function TermsOfService({ actionData }: Route.ComponentProps) {
           Last updated: August 1, 2026
         </p>
 
-        {consentRequired && (
+        {consentRequired && hasUser && (
           <div
             role="status"
             className="mt-4 rounded-input border border-info/40 bg-info/10 p-3 text-sm"
@@ -61,6 +93,7 @@ export default function TermsOfService({ actionData }: Route.ComponentProps) {
             </p>
             <Form method="post" className="mt-3 space-y-3">
               <input type="hidden" name="next" value={next} />
+              <input type="hidden" name="csrfToken" value={csrfToken} />
               <label className="flex items-start gap-2">
                 <input name="acceptTerms" type="checkbox" className="mt-1" />
                 <span>

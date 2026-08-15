@@ -298,12 +298,21 @@ export async function storeExportZip(
 ): Promise<string> {
   const storage = await resolveStorage();
   const key = `${EXPORT_FILE_PREFIX}${exportId}.zip`;
-  await storage.put({
-    key,
-    body: buffer,
-    contentType: "application/zip",
-    size: buffer.length,
-    checksum,
-  });
+  try {
+    await storage.put({
+      key,
+      body: buffer,
+      contentType: "application/zip",
+      size: buffer.length,
+      checksum,
+    });
+  } catch (error) {
+    // The key is deterministic and the local adapter writes with
+    // `flag: "wx"`. A BullMQ retry after a crash between put and
+    // markExportReady hits EEXIST — the object already exists with the same
+    // content, so treat it as success.
+    const existing = await storage.exists(key).catch(() => false);
+    if (!existing) throw error;
+  }
   return key;
 }

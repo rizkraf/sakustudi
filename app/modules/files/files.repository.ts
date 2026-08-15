@@ -1,7 +1,7 @@
-import { and, desc, eq, sum, type SQL } from "drizzle-orm";
+import { and, desc, eq, isNotNull, sum, type SQL } from "drizzle-orm";
 
 import { getDb } from "~/lib/db/client";
-import { attachments } from "~/lib/db/schema";
+import { attachments, dataExports } from "~/lib/db/schema";
 
 const db = getDb();
 
@@ -99,5 +99,12 @@ export async function sumOwnedAttachmentBytes(userId: string): Promise<number> {
 /** Every storage key with metadata, for orphan detection. */
 export async function listAllStorageKeys(): Promise<string[]> {
   const rows = await db.select({ storageKey: attachments.storageKey }).from(attachments);
-  return rows.map((row) => row.storageKey);
+  const exports = await db
+    .select({ fileUrl: dataExports.fileUrl })
+    .from(dataExports)
+    .where(isNotNull(dataExports.fileUrl));
+  return [
+    ...rows.map((row) => row.storageKey),
+    ...exports.map((row) => row.fileUrl).filter((key): key is string => Boolean(key)),
+  ];
 }

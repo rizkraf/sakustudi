@@ -132,6 +132,17 @@ export class LocalFileStorage implements FileStorage {
     }
     return keys;
   }
+
+  /** mtime of a stored object (null when missing) for orphan grace checks. */
+  async modifiedAt(key: string): Promise<Date | null> {
+    try {
+      const info = await stat(this.pathFor(key));
+      return info.mtime;
+    } catch (error) {
+      if (isNoSuchFile(error)) return null;
+      throw error;
+    }
+  }
 }
 
 export function createLocalStorage(): FileStorage {

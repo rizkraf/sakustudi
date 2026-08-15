@@ -23,7 +23,7 @@ export async function action({ request }: Route.ActionArgs) {
       headers: request.headers,
       returnHeaders: true,
     });
-    throw redirect("/", { headers });
+    throw redirect("/dashboard", { headers });
   } catch (error) {
     if (error instanceof APIError) {
       return data<ActionData>(
@@ -34,7 +34,7 @@ export async function action({ request }: Route.ActionArgs) {
     throw error;
   }
 
-  throw redirect("/");
+  throw redirect("/dashboard");
 }
 
 export default function Login({ actionData }: Route.ComponentProps) {

@@ -48,7 +48,7 @@ test.describe("auth flows", () => {
     await page.getByLabel("Password").fill("password123");
     await page.getByRole("button", { name: "Sign in" }).click();
 
-    await expect(page).toHaveURL("http://localhost:3000/");
+    await expect(page).toHaveURL("http://localhost:3000/dashboard");
   });
 
   test("resets the password via email link", async ({ page }) => {
@@ -79,7 +79,7 @@ test.describe("auth flows", () => {
     await page.getByLabel("Password").fill("newpassword456");
     await page.getByRole("button", { name: "Sign in" }).click();
 
-    await expect(page).toHaveURL("http://localhost:3000/");
+    await expect(page).toHaveURL("http://localhost:3000/dashboard");
   });
 
   test("re-consents from the terms page after being blocked", async ({ page }) => {
@@ -95,14 +95,15 @@ test.describe("auth flows", () => {
     const verifyResponse = await page.request.get(verifyMail.url!);
     expect(verifyResponse.ok()).toBeTruthy();
 
-    await page.goto("/");
+    await page.goto("/dashboard");
     await expect(page).toHaveURL(/\/legal\/terms\?consent=required/);
 
     await page.getByRole("checkbox").nth(0).check();
     await page.getByRole("checkbox").nth(1).check();
     await page.getByRole("button", { name: "Accept and continue" }).click();
 
-    await expect(page).toHaveURL("http://localhost:3000/");
+    // Re-consent lands back on the originally intended destination.
+    await expect(page).toHaveURL("http://localhost:3000/dashboard");
     await expect(page.getByText(/SakuStudi/i).first()).toBeVisible();
   });
 });

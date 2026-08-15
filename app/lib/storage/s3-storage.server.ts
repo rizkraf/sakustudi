@@ -106,6 +106,19 @@ export class S3FileStorage implements FileStorage {
     }
   }
 
+  /** LastModified of an object (null when missing) for orphan grace checks. */
+  async modifiedAt(key: string): Promise<Date | null> {
+    try {
+      const result = await this.client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+      return result.LastModified ?? null;
+    } catch (error) {
+      if (isNotFound(error)) return null;
+      throw error;
+    }
+  }
+
   async listKeys(): Promise<string[]> {
     const keys: string[] = [];
     let token: string | undefined;

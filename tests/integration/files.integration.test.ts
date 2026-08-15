@@ -333,7 +333,7 @@ describe("private file storage integration", () => {
     await expect(storage.delete(attachment.storageKey)).resolves.toBeUndefined();
   });
 
-  it("detects orphaned objects with no metadata row", async () => {
+  it("detects orphaned objects with no metadata row (after grace period)", async () => {
     const { userId, noteId } = await createUserWithParents();
     const storage = (await resolveStorage()) as ListableStorage;
 
@@ -347,21 +347,24 @@ describe("private file storage integration", () => {
       checksum: validated.checksum,
     });
 
-    const orphans = await listOrphanObjects();
-    expect(orphans).toContain(orphanKey);
+    // Fresh objects are protected by the grace period even without metadata.
+    const beforeGrace = await listOrphanObjects();
+    expect(beforeGrace).not.toContain(orphanKey);
+    const zeroGrace = await findOrphanObjects(storage, [], 0);
+    expect(zeroGrace).toContain(orphanKey);
 
     const attachment = await createAttachment(userId, { kind: "note", id: noteId }, pdfFile());
-    const afterUpload = await listOrphanObjects();
+    const afterUpload = await findOrphanObjects(storage, await listAllStorageKeys(), 0);
     expect(afterUpload).not.toContain(attachment.storageKey);
     expect(afterUpload).toContain(orphanKey);
 
     // The helper itself must diff against the full metadata set: with every
     // DB key known, only the manually planted object remains an orphan.
-    const byKnownSet = await findOrphanObjects(storage, await listAllStorageKeys());
+    const byKnownSet = await findOrphanObjects(storage, await listAllStorageKeys(), 0);
     expect(byKnownSet).toEqual([orphanKey]);
 
     await storage.delete(orphanKey);
-    expect(await listOrphanObjects()).not.toContain(orphanKey);
+    expect(await findOrphanObjects(storage, [], 0)).not.toContain(orphanKey);
   });
 
   it("rejects unsafe storage keys with FORBIDDEN", async () => {

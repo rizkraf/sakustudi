@@ -15,10 +15,15 @@ test.describe("PWA installability and mobile shell", () => {
 
   async function openAppAsUser(page: import("@playwright/test").Page) {
     await signInViaApi(page, uniqueEmail("pwa"));
+    // The root is the public landing; the app shell lives under /dashboard.
+    await page.goto("/dashboard");
   }
 
   test("serves manifest metadata and registers the service worker", async ({ page }) => {
-    await openAppAsUser(page);
+    // The offline-ready prompt fires on the first document load after the
+    // service worker installs; sign-in ends on the public landing, so assert
+    // here instead of navigating to the shell.
+    await signInViaApi(page, uniqueEmail("pwa"));
 
     await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
       "href",
