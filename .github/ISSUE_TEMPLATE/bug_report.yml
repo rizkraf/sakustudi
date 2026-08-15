@@ -1,0 +1,43 @@
+name: Bug report
+description: Laporkan masalah agar bisa diperbaiki
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Terima kasih sudah melaporkan. Jangan sertakan data pribadi, email,
+        catatan, atau file privat di laporan ini.
+  - type: input
+    id: environment
+    attributes:
+      label: Lingkungan
+      description: Versi (commit/tag) dan mode pemasangan (Docker Compose, self-host, dev).
+      placeholder: "v0.1.0 / Docker Compose"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Langkah reproduksi
+      description: Langkah berurutan untuk memunculkan masalah.
+      placeholder: "1. Buka ... 2. Klik ... 3. Lihat error"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Hasil yang diharapkan
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Hasil aktual
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log (jika ada)
+      description: Sertakan log yang relevan tanpa data pribadi.
+      render: shell

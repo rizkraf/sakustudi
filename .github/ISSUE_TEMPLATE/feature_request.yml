@@ -1,0 +1,28 @@
+name: Feature request
+description: Usulkan fitur atau perbaikan
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Masalah yang dipecahkan
+      description: Skenario atau kebutuhan yang mendorong usulan ini.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Usulan solusi
+      description: Bagaimana fitur seharusnya bekerja.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatif yang dipertimbangkan
+      description: Pendekatan lain yang sudah dipikirkan (jika ada).
+  - type: textarea
+    id: context
+    attributes:
+      label: Konteks tambahan
+      description: Mockup, referensi, atau catatan lain.
