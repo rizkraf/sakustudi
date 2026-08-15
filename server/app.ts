@@ -3,11 +3,13 @@ import { createRequestHandler } from "@react-router/express";
 import express from "express";
 
 import { valueFromExpressContext } from "~/context";
+import { rateLimitMiddleware } from "~/lib/rate-limit/middleware";
 import { requestIdMiddleware } from "~/lib/request/request-id.server";
 
 export const app = express();
 
 app.use(requestIdMiddleware);
+app.use(rateLimitMiddleware);
 
 app.use(
   createRequestHandler({
