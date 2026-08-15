@@ -91,6 +91,8 @@ const STEPS = [
   },
 ] as const;
 
+const HERO_TRUST_POINTS = ["Data privat", "Bisa diekspor", "Bisa di-host sendiri"] as const;
+
 const TRUST_POINTS = ["Self-hosted (Docker Compose)", "Open source", "Privat & dapat diekspor", "Tanpa iklan"] as const;
 
 const FAQS = [
@@ -121,7 +123,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     <main className="flex min-h-screen flex-col bg-canvas text-ink">
       <header className="sticky top-0 z-10 border-b border-border bg-canvas/90 backdrop-blur">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between px-6 py-4">
-          <p className="text-lg font-semibold tracking-tight">Sakustudi</p>
+          <a
+            href="/"
+            className="text-lg font-semibold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            Sakustudi
+          </a>
           <nav className="hidden items-center gap-6 text-sm sm:flex" aria-label="Sections">
             {NAV_LINKS.map((link) => (
               <a key={link.href} href={link.href} className="font-medium text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
@@ -181,11 +188,22 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 Masuk
               </a>
             </div>
-            <p className="mt-6 text-xs text-muted">
-              Data privat · Bisa diekspor · Bisa di-host sendiri
-            </p>
+            <ul className="mt-6 flex flex-wrap items-center justify-center gap-2 lg:justify-start">
+              {HERO_TRUST_POINTS.map((point) => (
+                <li
+                  key={point}
+                  className="rounded-control bg-primary/15 px-3 py-1 text-xs font-medium"
+                >
+                  {point}
+                </li>
+              ))}
+            </ul>
           </div>
 
+          <p className="sr-only">
+            Contoh: kartu semester aktif dengan progress tiga mata kuliah dan
+            pengingat deadline.
+          </p>
           <div className="mx-auto w-full max-w-sm rounded-card border border-border bg-surface p-5" aria-hidden="true">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold">Semester Gasal 2026/27</p>
@@ -301,11 +319,17 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       <footer className="mx-auto w-full max-w-4xl px-6 py-8 text-center text-xs text-muted">
         <p>Produk pihak ketiga, tidak berafiliasi dengan Universitas Terbuka.</p>
         <p className="mt-2">
-          <a className="underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus" href="/legal/terms">
+          <a
+            className="inline-flex min-h-11 items-center underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            href="/legal/terms"
+          >
             Terms of Service
           </a>
           {" · "}
-          <a className="underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus" href="/legal/privacy">
+          <a
+            className="inline-flex min-h-11 items-center underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            href="/legal/privacy"
+          >
             Privacy Policy
           </a>
         </p>
