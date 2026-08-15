@@ -1,6 +1,7 @@
 import { data, Link, redirect, useSearchParams, Form } from "react-router";
 import { APIError } from "better-auth";
 import { auth } from "~/lib/auth/server";
+import { isAppError } from "~/lib/errors/AppError";
 import { assertLoginRateLimit } from "~/lib/rate-limit/assertions";
 
 import type { Route } from "./+types/login";
@@ -18,9 +19,9 @@ export async function action({ request }: Route.ActionArgs) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
-  await assertLoginRateLimit(email);
-
   try {
+    await assertLoginRateLimit(email);
+
     const { headers } = await auth.api.signInEmail({
       body: { email, password },
       headers: request.headers,
@@ -28,6 +29,9 @@ export async function action({ request }: Route.ActionArgs) {
     });
     throw redirect("/dashboard", { headers });
   } catch (error) {
+    if (isAppError(error)) {
+      return data<ActionData>({ error: error.message }, { status: 429 });
+    }
     if (error instanceof APIError) {
       return data<ActionData>(
         { error: error.message || "Invalid email or password." },

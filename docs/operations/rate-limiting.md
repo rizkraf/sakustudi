@@ -19,6 +19,11 @@ diproses normal dengan warning — limiter tidak pernah mematikan aplikasi.
 Login per-email case-insensitive (email di-lowercase). Client IP diambil
 dari hop pertama `X-Forwarded-For` (set proxy), fallback ke socket address.
 
+> **Peringatan:** Client IP diambil dari hop pertama `X-Forwarded-For`. Ini
+> hanya aman jika reverse proxy di depan aplikasi selalu menimpa header
+> tersebut; jangan ekspos listener aplikasi langsung ke internet tanpa proxy
+> yang mengatur XFF.
+
 ## Konfigurasi
 
 Semua variabel opsional; `0`/kosong = default. `RATE_LIMIT_ENABLED=false`

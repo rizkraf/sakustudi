@@ -43,7 +43,8 @@ export async function consumeRateLimit(
     const [allowed, retry] = result;
     return { allowed: allowed === 1, retryAfterSeconds: Math.max(0, retry) };
   } catch (error) {
-    console.warn(`rate-limit: redis unavailable for key "${key}", failing open`, error);
+    const prefix = key.split(":").slice(0, -1).join(":");
+    console.warn(`rate-limit: redis unavailable for key "${prefix}:*", failing open`, error);
     return { allowed: true, retryAfterSeconds: 0 };
   }
 }
