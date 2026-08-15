@@ -12,6 +12,7 @@ import {
   getQueueSnapshots,
   readWorkerHeartbeat,
 } from "~/modules/monitoring/health";
+import { loader as readinessLoader } from "~/routes/healthz.ready";
 
 beforeAll(async () => {
   await migrate(getDb(), { migrationsFolder: "./drizzle" });
@@ -87,5 +88,15 @@ describe("checkReadiness", () => {
     const report = await checkReadiness();
     expect(report.checks.worker.running).toBe(false);
     expect(["degraded", "down"]).toContain(report.status);
+  });
+});
+
+describe("healthz/ready loader", () => {
+  it("returns a JSON report whose status matches the HTTP status", async () => {
+    const response = await readinessLoader();
+    const body = (await response.json()) as { status: string };
+    expect(response.headers.get("content-type")).toContain("application/json");
+    expect(response.status).toBe(body.status === "down" ? 503 : 200);
+    expect(["ok", "degraded", "down"]).toContain(body.status);
   });
 });

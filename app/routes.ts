@@ -4,6 +4,7 @@ export default [
   index("routes/home.tsx"),
   route("dashboard", "routes/dashboard.tsx"),
   route("healthz", "routes/healthz.ts"),
+  route("healthz/ready", "routes/healthz.ready.ts"),
   route("api/auth/*", "routes/api.auth.ts"),
   route("register", "routes/register.tsx"),
   route("login", "routes/login.tsx"),
