@@ -10,40 +10,63 @@
 
 ## Backup terjadwal
 
-Contoh cron (host) untuk compose default:
+Gunakan `scripts/backup.sh` (pg_dump logical + gzip + retensi + storage
+tar opsional):
+
+```bash
+# Produksi (compose default)
+bash scripts/backup.sh
+
+# Mode dev (compose dev file)
+PGDUMP_CMD="docker compose -f docker-compose.dev.yml exec -T postgres pg_dump -U sakustudi sakustudi" bash scripts/backup.sh
+
+# Dengan backup volume storage
+BACKUP_STORAGE_DIR=/var/lib/docker/volumes/sakustudi_storage-data/_data bash scripts/backup.sh
+```
+
+Variabel: `BACKUP_DIR` (default `./backups`), `BACKUP_RETENTION_DAYS`
+(default 7), `BACKUP_STORAGE_DIR` (opsional), `PGDUMP_CMD`.
+
+Contoh cron (host, produksi):
 
 ```cron
-# PostgreSQL logical dump, retensi 7 hari
-0 3 * * * docker compose exec -T postgres pg_dump -U sakustudi sakustudi | gzip > /backups/sakustudi-$(date +\%F).sql.gz && find /backups -name '*.sql.gz' -mtime +7 -delete
-
-# Volume storage (rsync ke lokasi lain)
-30 3 * * * rsync -a --delete /var/lib/docker/volumes/sakustudi_storage-data/ /backups/storage/
+0 3 * * * cd /opt/sakustudi && bash scripts/backup.sh >> /var/log/sakustudi-backup.log 2>&1
 ```
+
+Simpan backup di host/objek storage yang berbeda dari data asli.
 
 ## Restore
 
-Urutan (di environment fresh):
+Gunakan `scripts/restore.sh` (urutan: restore dump → migrate → verifikasi):
 
-1. `docker compose up -d postgres redis` (sebelum web/worker).
-2. Restore dump:
+```bash
+# Dry-run dulu
+DUMP_FILE=./backups/sakustudi-YYYYMMDD-HHMMSS.sql.gz bash scripts/restore.sh --dry-run
 
-   ```bash
-   gunzip -c /backups/sakustudi-YYYY-MM-DD.sql.gz | docker compose exec -T postgres psql -U sakustudi sakustudi
-   ```
+# Restore nyata (environment fresh: postgres sudah up, DB kosong)
+DUMP_FILE=./backups/sakustudi-YYYYMMDD-HHMMSS.sql.gz bash scripts/restore.sh
+```
 
-3. Restore volume storage dari backup.
-4. Jalankan migrate (idempotent, menyelaraskan schema):
+Variabel: `DUMP_FILE` (wajib), `PSQL_CMD`, `MIGRATE_CMD` (default compose
+produksi). Mode dev: override dengan `-f docker-compose.dev.yml`.
 
-   ```bash
-   docker compose --profile tools run --rm migrate
-   ```
+Setelah restore: `docker compose up -d` — worker menjalankan reconciliation:
+outbox pending dan reminder yang jatuh tempo di-enqueue ulang dari
+PostgreSQL. Verifikasi manual: login, dashboard, catatan, file, reminder,
+export, dan delete.
 
-5. `docker compose up -d` — worker menjalankan reconciliation: outbox pending
-   dan reminder yang jatuh tempo di-enqueue ulang dari PostgreSQL.
-6. Verifikasi: login, dashboard, catatan, file, reminder, export, dan delete.
+## Drill otomatis
+
+Prosedur pemulihan diuji otomatis (round-trip dump → restore ke database
+test terpisah → assert data):
+
+```bash
+npx vitest run --project integration tests/integration/backup-restore.integration.test.ts
+```
+
+Test terskip jika postgres container dev tidak berjalan.
 
 ## Catatan
 
 - Redis tidak perlu di-restore; job yang hilang dipulihkan dari PostgreSQL.
-- Uji drill restore di environment terpisah minimal sekali sebelum go-live.
 - Backup SQL dan storage jangan disimpan di host yang sama dengan data asli.
