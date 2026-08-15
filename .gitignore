@@ -21,6 +21,9 @@ playwright-report/
 # Private file storage (local driver writes outside the web root)
 /storage/
 
+# Local backups (scripts/backup.sh output)
+backups/
+
 # Template additions
 .DS_Store
 *.tsbuildinfo
