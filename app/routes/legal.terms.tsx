@@ -1,10 +1,9 @@
 import { data, Link, redirect, Form } from "react-router";
 
-import { csrfTokenContext } from "~/context";
+import { csrfTokenContext, sessionUserContext } from "~/context";
 import {
   getSessionUser,
   requireSessionUser,
-  requireUserMiddleware,
   safeRedirectTarget,
 } from "~/lib/auth/session";
 import {
@@ -26,7 +25,14 @@ export const meta: Route.MetaFunction = () => [
 ];
 
 export const middleware: Route.MiddlewareFunction[] = [
-  requireUserMiddleware,
+  // Soft session: the terms page stays public (register links to it), but
+  // csrfCookieMiddleware still gets the session user to mint a token for the
+  // re-consent form. The action enforces authentication itself.
+  async ({ context, request }, next) => {
+    const user = await getSessionUser(request);
+    if (user) context.set(sessionUserContext, user);
+    return next();
+  },
   csrfCookieMiddleware,
 ];
 
