@@ -18,6 +18,7 @@ import { runSendReminder } from "./tasks/send-reminder";
 import { runCreateExport } from "./tasks/create-export";
 import { runDeleteUserFiles } from "./tasks/delete-user-files";
 import { installShutdown } from "./shutdown";
+import { startHeartbeat } from "~/lib/monitoring/heartbeat";
 
 const REMINDERS_CONCURRENCY = 4;
 const EMAILS_CONCURRENCY = 2;
@@ -119,9 +120,14 @@ async function main(): Promise<void> {
     });
   }
 
+  const heartbeat = await startHeartbeat();
+
   installShutdown({
     workers: [remindersWorker, emailsWorker, cleanupWorker, exportsWorker],
-    onClose: closeDb,
+    onClose: async () => {
+      await heartbeat.stop();
+      await closeDb();
+    },
   });
 
   // Re-arm the maintenance loops from the workers' completion/failure events
