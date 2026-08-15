@@ -19,6 +19,7 @@
   --radius-control: 8px;
   --radius-card: 12px;
   --spacing-page: 24px;
+  --ease-snappy: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 :root {
@@ -42,5 +43,24 @@
 
   body {
     @apply min-h-screen bg-canvas font-sans text-ink antialiased;
+  }
+}
+
+@layer utilities {
+  /**
+   * Press feedback for actionable elements: snappy scale on :active. The
+   * transform transition runs only when motion is allowed; reduced-motion
+   * users keep the (color/opacity) hover states without movement.
+   */
+  .pressable {
+    transition:
+      transform 160ms var(--ease-snappy),
+      opacity 160ms ease;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .pressable:active {
+      transform: scale(0.97);
+    }
   }
 }

@@ -139,13 +139,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <nav className="flex items-center gap-3 text-sm" aria-label="Account">
             <a
               href="/login"
-              className="inline-flex min-h-11 items-center rounded-control border border-border bg-surface px-4 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              className="pressable inline-flex min-h-11 items-center rounded-control border border-border bg-surface px-4 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
               Masuk
             </a>
             <a
               href="/register"
-              className="inline-flex min-h-11 items-center rounded-control bg-primary px-4 py-2 font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              className="pressable inline-flex min-h-11 items-center rounded-control bg-primary px-4 py-2 font-semibold text-ink transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
               Daftar
             </a>
@@ -177,13 +177,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
               <a
                 href="/register"
-                className="min-h-11 w-full rounded-control bg-primary px-6 py-3 text-center text-sm font-semibold text-ink transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
+                className="pressable min-h-11 w-full rounded-control bg-primary px-6 py-3 text-center text-sm font-semibold text-ink transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
               >
                 Buat dashboard semester — gratis
               </a>
               <a
                 href="/login"
-                className="min-h-11 w-full rounded-control border border-border bg-surface px-6 py-3 text-center text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
+                className="pressable min-h-11 w-full rounded-control border border-border bg-surface px-6 py-3 text-center text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
               >
                 Masuk
               </a>
@@ -295,7 +295,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               <details key={faq.question} className="group rounded-card border border-border bg-canvas">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
                   <span>{faq.question}</span>
-                  <span aria-hidden="true" className="text-muted transition-transform duration-200 group-open:rotate-180">
+                  <span aria-hidden="true" className="text-muted transition-transform duration-200 ease-snappy group-open:rotate-180">
                     ▾
                   </span>
                 </summary>
@@ -310,7 +310,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <h2 className="text-2xl font-bold tracking-tight">Semester berikutnya, mulai sekarang</h2>
         <a
           href="/register"
-          className="mt-6 inline-block min-h-11 rounded-control bg-primary px-8 py-3 text-sm font-semibold text-ink transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          className="pressable mt-6 inline-block min-h-11 rounded-control bg-primary px-8 py-3 text-sm font-semibold text-ink transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           Buat dashboard semester — gratis
         </a>
