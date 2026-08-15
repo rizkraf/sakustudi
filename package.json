@@ -18,6 +18,7 @@
     "ci": "npm run typecheck && npm run lint && npm test && npm run test:integration && npm run build && npm run test:e2e",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
+    "analytics:funnel": "tsx scripts/analytics-funnel.ts",
     "worker": "tsx worker/index.ts"
   },
   "dependencies": {
