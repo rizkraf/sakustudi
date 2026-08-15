@@ -34,6 +34,8 @@ export type QueueSnapshot = {
   name: string;
   counts: QueueCounts;
   recentFailed: FailedJobSummary[];
+  /** True when the snapshot read itself failed; counts are zeroed. */
+  error?: boolean;
 };
 
 export type ReadinessReport = {
@@ -88,6 +90,9 @@ export async function readWorkerHeartbeat(): Promise<WorkerHeartbeat> {
       return { running: false, lastSeenAt: null, ageSeconds: null };
     }
     const lastSeenAt = new Date(raw);
+    if (Number.isNaN(lastSeenAt.getTime())) {
+      return { running: false, lastSeenAt: raw, ageSeconds: null };
+    }
     const ageSeconds = Math.max(
       0,
       Math.round((Date.now() - lastSeenAt.getTime()) / 1000),
@@ -130,6 +135,14 @@ export async function getQueueSnapshots(): Promise<QueueSnapshot[]> {
           finishedOn: job.finishedOn ?? null,
         })),
       });
+    } catch (error) {
+      console.warn(`monitoring: queue snapshot failed for "${name}"`, error);
+      snapshots.push({
+        name,
+        counts: { waiting: 0, active: 0, delayed: 0, failed: 0, completed: 0 },
+        recentFailed: [],
+        error: true,
+      });
     } finally {
       await queue.close();
     }
@@ -149,7 +162,7 @@ export async function checkReadiness(): Promise<ReadinessReport> {
     dbOk,
     redisOk,
     worker.running,
-    queues.some((queue) => queue.counts.failed > 0),
+    queues.some((queue) => queue.counts.failed > 0 || queue.error === true),
   );
   return {
     status,

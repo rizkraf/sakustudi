@@ -6,8 +6,16 @@ import { checkReadiness } from "~/modules/monitoring/health";
  * 200 otherwise, so orchestration can route on it.
  */
 export async function loader() {
-  const report = await checkReadiness();
-  return Response.json(report, {
-    status: report.status === "down" ? 503 : 200,
-  });
+  try {
+    const report = await checkReadiness();
+    return Response.json(report, {
+      status: report.status === "down" ? 503 : 200,
+    });
+  } catch (error) {
+    console.error("monitoring: readiness check failed", error);
+    return Response.json(
+      { status: "down", checkedAt: new Date().toISOString() },
+      { status: 503 },
+    );
+  }
 }
