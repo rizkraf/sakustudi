@@ -7,6 +7,9 @@ set -euo pipefail
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
 PGDUMP_CMD="${PGDUMP_CMD:-docker compose exec -T postgres pg_dump -U sakustudi sakustudi}"
+case "$BACKUP_RETENTION_DAYS" in
+  ''|*[!0-9]*) echo "backup: BACKUP_RETENTION_DAYS must be a number" >&2; exit 1 ;;
+esac
 TS="$(date +%Y%m%d-%H%M%S)"
 SQL_FILE="$BACKUP_DIR/sakustudi-$TS.sql.gz"
 STORAGE_FILE=""

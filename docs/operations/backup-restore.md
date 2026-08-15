@@ -50,6 +50,13 @@ DUMP_FILE=./backups/sakustudi-YYYYMMDD-HHMMSS.sql.gz bash scripts/restore.sh
 Variabel: `DUMP_FILE` (wajib), `PSQL_CMD`, `MIGRATE_CMD` (default compose
 produksi). Mode dev: override dengan `-f docker-compose.dev.yml`.
 
+Jika backup menyertakan storage (`storage-<ts>.tar.gz` dari
+`BACKUP_STORAGE_DIR`), pulihkan sebelum menyalakan aplikasi:
+
+```bash
+tar -xzf /backups/storage-YYYYMMDD-HHMMSS.tar.gz -C /data   # sesuaikan dengan STORAGE_LOCAL_ROOT/volume
+```
+
 Setelah restore: `docker compose up -d` — worker menjalankan reconciliation:
 outbox pending dan reminder yang jatuh tempo di-enqueue ulang dari
 PostgreSQL. Verifikasi manual: login, dashboard, catatan, file, reminder,

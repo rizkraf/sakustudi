@@ -41,6 +41,7 @@ async function psqlRestore(db: string, sql: string): Promise<void> {
       { stdio: ["pipe", "pipe", "pipe"] },
     );
     let stderr = "";
+    child.stdout.resume();
     child.stderr.on("data", (chunk) => {
       stderr += chunk;
     });
@@ -83,7 +84,7 @@ describe.runIf(await dockerAvailable())("backup/restore drill", () => {
     const { stdout } = await exec("docker", [
       "compose", "-f", COMPOSE, "exec", "-T", "postgres",
       "pg_dump", "-U", DB_USER, DB_NAME,
-    ]);
+    ], { maxBuffer: 16 * 1024 * 1024 });
     const { gzipSync } = await import("node:zlib");
     await import("node:fs/promises").then((fs) =>
       fs.writeFile(dumpPath, gzipSync(Buffer.from(stdout, "utf8"))),
@@ -125,6 +126,6 @@ describe.runIf(await dockerAvailable())("backup/restore drill", () => {
     if (createdUserId) {
       await getDb().delete(user).where(eq(user.id, createdUserId)).catch(() => undefined);
     }
-    await closeDb();
+    await closeDb().catch(() => undefined);
   });
 });
