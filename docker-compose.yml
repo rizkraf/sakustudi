@@ -89,6 +89,16 @@ services:
       <<: *app-env
     volumes:
       - storage-data:/data
+    healthcheck:
+      test:
+        - "CMD"
+        - "node"
+        - "-e"
+        - "const R=require('ioredis');const r=new R(process.env.REDIS_URL||'redis://localhost:6379',{maxRetriesPerRequest:1,lazyConnect:true,connectionTimeout:5000});r.ping().then(()=>r.get('sakustudi:worker:heartbeat')).then(v=>{if(!v)throw new Error('no heartbeat');process.exit(0)}).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
 volumes:
   postgres-data:
