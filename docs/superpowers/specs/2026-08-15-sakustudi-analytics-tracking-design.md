@@ -55,7 +55,7 @@ Module baru `app/modules/analytics/`:
   try/catch di sekeliling insert; gagal → `console.warn` tanpa melempar
   error. EventName divalidasi terhadap daftar yang dikenal sebelum insert.
 - `analytics.events.ts` — konstanta nama event + tipe properties per
-  event (source: catalog/custom, type aktivitas, channel reminder,
+  event (source: catalog/custom, type aktivitas, channels reminder,
   mimeType, exportType).
 
 Data flow:
@@ -82,7 +82,7 @@ outbox/BullMQ. Analitik adalah metrik, bukan job yang wajib dikirim.
 | `activity_completed` | activities service, transisi status ke `completed` | `{ type: activityType }` |
 | `note_created` | notes service `createNote` | `{}` |
 | `file_uploaded` | files service, setelah upload valid | `{ mimeType: string \| null }` |
-| `reminder_created` | reminders service, setelah jadwal tersimpan | `{ channel: reminderChannel }` |
+| `reminder_created` | `createActivity`, setelah schedule tersimpan | `{ channels: ("in_app" \| "email")[] }` |
 | `export_requested` | exports service | `{ exportType: exportType }` |
 
 Larangan properties: email, isi catatan, judul, nama mata kuliah, path
