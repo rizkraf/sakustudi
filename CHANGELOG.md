@@ -18,7 +18,7 @@ Semua perubahan penting dicatat di file ini (format: Keep a Changelog).
 
 ### Changed
 
-- Konsentasi privasi menjadi version-aware (re-consent saat kebijakan berubah).
+- Konsentrasi privasi menjadi version-aware (re-consent saat kebijakan berubah).
 
 ### Security
 
