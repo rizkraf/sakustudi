@@ -24,6 +24,7 @@ export default defineConfig({
       MAIL_ADAPTER: "file",
       MAIL_FILE_PATH: ".tmp/mail.json",
       BETTER_AUTH_SECRET: "e2e-test-secret-change-me",
+      RATE_LIMIT_ENABLED: "false",
     },
   },
 });
