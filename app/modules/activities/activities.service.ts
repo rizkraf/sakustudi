@@ -11,6 +11,7 @@ import {
   type ReminderScheduleActivity,
 } from "~/modules/reminders/reminders.service";
 import { zodIssuesToFieldErrors } from "~/modules/shared/zod";
+import { trackEvent } from "~/modules/analytics/analytics.service";
 import {
   canTransitionStatus,
   createActivitySchema,
@@ -84,8 +85,10 @@ export async function createActivity(
   }
 
   const db = getDb();
-  return db.transaction(async (tx) => {
-    const activity = await insertActivity(
+  let activity: Activity;
+  let reminderChannels: string[] = [];
+  await db.transaction(async (tx) => {
+    activity = await insertActivity(
       userId,
       {
         courseId: course.id,
@@ -99,20 +102,26 @@ export async function createActivity(
       tx,
     );
     const emailEnabled = await getReminderEmailEnabled(tx, userId);
-    await createReminderScheduleInTx(
+    const reminders = await createReminderScheduleInTx(
       tx,
       userId,
       toScheduleActivity(activity),
       emailEnabled,
     );
+    reminderChannels = [...new Set(reminders.map((r) => r.channel))];
     await insertOutboxEvent(tx, {
       userId,
       eventType: "activity.created",
       eventKey: `activity.created:${activity.id}:${crypto.randomUUID()}`,
       payload: { activityId: activity.id },
     });
-    return activity;
   });
+
+  await trackEvent(userId, "activity_created", { type: activity!.type });
+  if (reminderChannels.length > 0) {
+    await trackEvent(userId, "reminder_created", { channels: reminderChannels });
+  }
+  return activity!;
 }
 
 /**
@@ -234,8 +243,10 @@ export async function setActivityStatus(
     });
   }
 
+  let completedNow = false;
+  let completedType: string | null = null;
   const db = getDb();
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const row = await lockOwnedActivity(userId, activityId, tx);
     if (!row) {
       throw new AppError("NOT_FOUND", "Activity not found.");
@@ -265,6 +276,8 @@ export async function setActivityStatus(
     );
 
     if (status === "completed") {
+      completedNow = true;
+      completedType = saved.type;
       await cancelReminderScheduleInTx(tx, activityId);
       await insertOutboxEvent(tx, {
         userId,
@@ -290,6 +303,10 @@ export async function setActivityStatus(
     }
     return saved;
   });
+  if (completedNow) {
+    await trackEvent(userId, "activity_completed", { type: completedType ?? "other" });
+  }
+  return result;
 }
 
 export async function setActivityStatusFromInput(

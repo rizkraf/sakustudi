@@ -11,6 +11,7 @@ import {
 } from "~/lib/storage/storage";
 import { findOwnedActivity } from "~/modules/activities/activities.repository";
 import { findOwnedNote } from "~/modules/notes/notes.repository";
+import { trackEvent } from "~/modules/analytics/analytics.service";
 
 import {
   deleteOwnedAttachment,
@@ -69,13 +70,15 @@ export async function createAttachment(
   });
 
   try {
-    return await insertAttachment(userId, parent, {
+    const row = await insertAttachment(userId, parent, {
       filename: validated.filename,
       storageKey: stored.key,
       mimeType: validated.mimeType,
       sizeBytes: stored.size,
       checksum: stored.checksum,
     });
+    await trackEvent(userId, "file_uploaded", { mimeType: validated.mimeType });
+    return row;
   } catch (error) {
     // The object landed but the metadata write failed: remove the object so
     // nothing is left without a row (best effort; delete is idempotent).

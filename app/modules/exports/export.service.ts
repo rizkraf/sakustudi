@@ -22,6 +22,7 @@ import { resolveStorage } from "~/lib/storage/storage";
 import type { FileStorage } from "~/lib/storage/storage";
 import { insertOutboxEvent } from "~/modules/outbox/outbox.repository";
 import { enqueueOutboxEvent } from "~/lib/queue/publish";
+import { trackEvent } from "~/modules/analytics/analytics.service";
 
 const db = getDb();
 
@@ -84,6 +85,7 @@ export async function requestDataExport(
       error,
     });
   });
+  await trackEvent(userId, "export_requested", { exportType: "all" });
   return created;
 }
 

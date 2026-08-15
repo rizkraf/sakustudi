@@ -5,6 +5,7 @@ import { getDb } from "~/lib/db/client";
 import { courses } from "~/lib/db/schema";
 import { findOwnedTerm } from "~/modules/academic-terms/terms.repository";
 import { zodIssuesToFieldErrors } from "~/modules/shared/zod";
+import { trackEvent } from "~/modules/analytics/analytics.service";
 import {
   findActiveCatalogCourse,
   selectCatalogCourses,
@@ -72,6 +73,7 @@ export async function createCourseFromCatalog(
       status: "planned",
     })
     .returning();
+  await trackEvent(userId, "course_created", { source: "catalog" });
   return row;
 }
 
@@ -107,5 +109,6 @@ export async function createCustomCourse(
       status: "planned",
     })
     .returning();
+  await trackEvent(userId, "course_created", { source: "custom" });
   return row;
 }

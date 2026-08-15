@@ -6,6 +6,7 @@ import { getDb } from "~/lib/db/client";
 import { user } from "~/lib/db/schema";
 import { recordRequiredConsents } from "~/modules/auth/consent.server";
 import { signUpConsentInputSchema } from "~/modules/auth/consent.schema";
+import { trackEvent } from "~/modules/analytics/analytics.service";
 
 import type { Route } from "./+types/register";
 
@@ -52,6 +53,7 @@ export async function action({ request }: Route.ActionArgs) {
     createdUserId = result.user.id;
     createdAtMs = new Date(result.user.createdAt).getTime();
     await recordRequiredConsents(result.user.id, consent.data);
+    await trackEvent(result.user.id, "signup_completed");
   } catch (error) {
     if (
       createdUserId &&

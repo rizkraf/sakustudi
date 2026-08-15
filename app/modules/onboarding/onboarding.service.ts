@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { getDb } from "~/lib/db/client";
 import { profiles } from "~/lib/db/schema";
+import { trackEvent } from "~/modules/analytics/analytics.service";
 
 export type OnboardingStatus = {
   completed: boolean;
@@ -46,4 +47,5 @@ export async function completeOnboarding(userId: string): Promise<void> {
         updatedAt: new Date(),
       },
     });
+  await trackEvent(userId, "onboarding_completed");
 }

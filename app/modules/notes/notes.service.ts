@@ -3,6 +3,7 @@ import { extractPlainText } from "~/lib/content/plain-text";
 import { sanitizeNoteHtml } from "~/lib/content/sanitize";
 import { findOwnedCourse } from "~/modules/courses/courses.repository";
 import { zodIssuesToFieldErrors } from "~/modules/shared/zod";
+import { trackEvent } from "~/modules/analytics/analytics.service";
 import {
   createNoteSchema,
   noteSearchSchema,
@@ -53,7 +54,7 @@ export async function createNote(
   }
 
   const content = sanitizeNoteHtml(parsed.data.contentHtml ?? "");
-  return insertNote(userId, {
+  const note = await insertNote(userId, {
     courseId,
     termId,
     title: parsed.data.title,
@@ -61,6 +62,8 @@ export async function createNote(
     contentText: extractPlainText(content),
     tags: parsed.data.tags ?? [],
   });
+  await trackEvent(userId, "note_created");
+  return note;
 }
 
 /**

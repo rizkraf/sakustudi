@@ -40,6 +40,7 @@ import {
   completeOnboarding,
   getOnboardingStatus,
 } from "~/modules/onboarding/onboarding.service";
+import { trackEvent } from "~/modules/analytics/analytics.service";
 
 import type { Route } from "./+types/onboarding";
 
@@ -185,6 +186,7 @@ export async function action({ request, context }: Route.ActionArgs) {
           );
         }
       }
+      await trackEvent(user.id, "onboarding_started");
       throw redirect(
         `/onboarding?step=2&programId=${encodeURIComponent(programId)}`,
       );
