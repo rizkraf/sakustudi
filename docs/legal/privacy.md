@@ -3,6 +3,8 @@
 Berlaku untuk Sakustudi ("aplikasi"). Sakustudi adalah produk pihak ketiga
 dan tidak berafiliasi dengan Universitas Terbuka (UT).
 
+Versi dokumen: 2026-08-15.
+
 ## Data yang dikumpulkan
 
 - Akun: email, nama tampilan, password (hash).
@@ -11,6 +13,14 @@ dan tidak berafiliasi dengan Universitas Terbuka (UT).
   reminder.
 - Data consent hukum: versi dokumen yang disetujui dan waktu persetujuan.
 - Log keamanan minimal tanpa isi konten: jenis aksi, id resource, waktu.
+
+## Metrik produk anonim
+
+Kami mencatat metrik produk anonim seperti pembuatan akun, penyelesaian
+onboarding, kursus yang dibuat, aktivitas, catatan, unggahan file, reminder,
+dan permintaan ekspor. Metrik ini tidak pernah memuat email, isi catatan,
+nama file, atau data privat pengguna. Saat akun dihapus, keterkaitan
+pengguna dihapus sehingga catatan metrik menjadi anonim.
 
 ## Penggunaan
 

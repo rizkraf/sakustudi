@@ -12,7 +12,7 @@ export default function PrivacyPolicy() {
       <article className="mx-auto max-w-2xl rounded-card border border-border bg-surface p-8">
         <h1 className="text-xl font-semibold">Privacy Policy</h1>
         <p className="mt-1 text-sm text-muted">
-          Last updated: August 1, 2026
+          Last updated: August 15, 2026
         </p>
 
         <div className="mt-6 space-y-4 text-sm leading-relaxed">
@@ -25,7 +25,18 @@ export default function PrivacyPolicy() {
             </p>
           </section>
           <section>
-            <h2 className="font-semibold">2. How we use it</h2>
+            <h2 className="font-semibold">2. Anonymous Product Metrics</h2>
+            <p>
+              We record anonymous product metrics such as account creation,
+              onboarding completion, created courses, activities, notes, file
+              uploads, reminders, and export requests. These metrics never
+              include your email, note content, file names, or private data.
+              Deleting your account anonymizes these records by removing your
+              user association.
+            </p>
+          </section>
+          <section>
+            <h2 className="font-semibold">3. How we use it</h2>
             <p>
               Your data powers the features you use, keeps your account secure,
               and sends you the emails you ask for (verification and password
@@ -33,28 +44,28 @@ export default function PrivacyPolicy() {
             </p>
           </section>
           <section>
-            <h2 className="font-semibold">3. What we do not do</h2>
+            <h2 className="font-semibold">4. What we do not do</h2>
             <p>
               We do not sell your personal data. We do not share it with third
               parties for advertising.
             </p>
           </section>
           <section>
-            <h2 className="font-semibold">4. Storage and security</h2>
+            <h2 className="font-semibold">5. Storage and security</h2>
             <p>
               Data is stored on servers we control, protected with encryption
               and access controls.
             </p>
           </section>
           <section>
-            <h2 className="font-semibold">5. Your rights</h2>
+            <h2 className="font-semibold">6. Your rights</h2>
             <p>
               You can export or delete your data at any time. Deleting your
               account removes your personal data.
             </p>
           </section>
           <section>
-            <h2 className="font-semibold">6. Changes</h2>
+            <h2 className="font-semibold">7. Changes</h2>
             <p>
               We may update this policy and will record your acceptance of
               updated versions.

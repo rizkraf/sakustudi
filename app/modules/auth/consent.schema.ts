@@ -5,7 +5,7 @@ export type LegalConsentType = (typeof LEGAL_CONSENT_TYPES)[number];
 
 export const LEGAL_DOCUMENT_VERSIONS: Record<LegalConsentType, string> = {
   terms_of_service: "2026-08-01",
-  privacy_policy: "2026-08-01",
+  privacy_policy: "2026-08-15",
 };
 
 export const signUpConsentInputSchema = z.object({

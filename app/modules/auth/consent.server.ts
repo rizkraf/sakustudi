@@ -16,13 +16,32 @@ export async function recordRequiredConsents(
 
   const db = getDb();
   const existing = await db
-    .select({ consentType: legalConsents.consentType })
+    .select({ consentType: legalConsents.consentType, version: legalConsents.version })
     .from(legalConsents)
     .where(eq(legalConsents.userId, userId));
 
-  const existingTypes = new Set(existing.map((row) => row.consentType));
+  const currentByType = new Map(
+    existing.map((row) => [row.consentType, row.version]),
+  );
+  const staleTypes = LEGAL_CONSENT_TYPES.filter(
+    (type) =>
+      currentByType.has(type) && currentByType.get(type) !== LEGAL_DOCUMENT_VERSIONS[type],
+  );
+  if (staleTypes.length > 0) {
+    await db
+      .delete(legalConsents)
+      .where(
+        and(
+          eq(legalConsents.userId, userId),
+          inArray(legalConsents.consentType, staleTypes),
+        ),
+      );
+    for (const type of staleTypes) {
+      currentByType.delete(type);
+    }
+  }
 
-  const rows = LEGAL_CONSENT_TYPES.filter((type) => !existingTypes.has(type)).map(
+  const rows = LEGAL_CONSENT_TYPES.filter((type) => !currentByType.has(type)).map(
     (type) => ({
       userId,
       consentType: type,
@@ -38,7 +57,7 @@ export async function recordRequiredConsents(
 export async function getMissingConsents(userId: string): Promise<LegalConsentType[]> {
   const db = getDb();
   const existing = await db
-    .select({ consentType: legalConsents.consentType })
+    .select({ consentType: legalConsents.consentType, version: legalConsents.version })
     .from(legalConsents)
     .where(
       and(
@@ -47,8 +66,12 @@ export async function getMissingConsents(userId: string): Promise<LegalConsentTy
       ),
     );
 
-  const existingTypes = new Set(existing.map((row) => row.consentType));
-  return LEGAL_CONSENT_TYPES.filter((type) => !existingTypes.has(type));
+  const currentByType = new Map(
+    existing.map((row) => [row.consentType, row.version]),
+  );
+  return LEGAL_CONSENT_TYPES.filter(
+    (type) => currentByType.get(type) !== LEGAL_DOCUMENT_VERSIONS[type],
+  );
 }
 
 export async function hasRequiredConsents(userId: string): Promise<boolean> {
