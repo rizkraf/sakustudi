@@ -26,6 +26,7 @@ import {
 } from "~/lib/time/deadlines";
 import { getActivity, setActivityStatusFromInput } from "~/modules/activities/activities.service";
 import { ACTIVITY_TYPE_LABELS, setActivityStatusSchema } from "~/modules/activities/activities.schema";
+import { assertUploadRateLimit } from "~/lib/rate-limit/assertions";
 import {
   createAttachment,
   deleteAttachment,
@@ -105,6 +106,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     if (intent === "attach-file") {
       const parsed = parseForm(attachmentUploadSchema, formData);
       if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
+      await assertUploadRateLimit(user.id);
       await createAttachment(
         user.id,
         { kind: "activity", id: params.activityId ?? "" },

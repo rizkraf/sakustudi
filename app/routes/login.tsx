@@ -1,6 +1,7 @@
 import { data, Link, redirect, useSearchParams, Form } from "react-router";
 import { APIError } from "better-auth";
 import { auth } from "~/lib/auth/server";
+import { assertLoginRateLimit } from "~/lib/rate-limit/assertions";
 
 import type { Route } from "./+types/login";
 
@@ -16,6 +17,8 @@ export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+
+  await assertLoginRateLimit(email);
 
   try {
     const { headers } = await auth.api.signInEmail({

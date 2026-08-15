@@ -24,6 +24,7 @@ import {
 } from "~/lib/request/security.server";
 import { parseForm } from "~/lib/validation/form-data";
 import { AppError } from "~/lib/errors/AppError";
+import { assertUploadRateLimit } from "~/lib/rate-limit/assertions";
 import { listOwnedCourses } from "~/modules/courses/courses.repository";
 import {
   createAttachment,
@@ -116,6 +117,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     if (intent === "attach-file") {
       const parsed = parseForm(attachmentUploadSchema, formData);
       if (isFieldErrorResponse(parsed)) return data(parsed, { status: 400 });
+      await assertUploadRateLimit(user.id);
       await createAttachment(user.id, { kind: "note", id: noteId }, parsed.file);
       // Canonical URL, not request.url: multipart submissions carry a .data
       // suffix React Router would otherwise follow into a 404 document load.
