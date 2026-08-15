@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-15T13:45:00.000Z",
+  "title": "Design System: Sakustudi",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Beacon Light",
+        "canonical": "#ffce54",
+        "tonalRamp": ["#403308", "#6b5608", "#8f7515", "#b39120", "#cfa82b", "#e5bd40", "#ffce54", "#fff3c2"]
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "Sinyal Hijau",
+        "canonical": "#cbe273",
+        "tonalRamp": ["#3f4d0a", "#5c7013", "#7a9220", "#98b42e", "#b3d14a", "#c4dd61", "#cbe273", "#f1f8d1"]
+      },
+      "danger": {
+        "role": "secondary",
+        "displayName": "Sinyal Merah",
+        "canonical": "#ff6b6b",
+        "tonalRamp": ["#5a0f0f", "#8c1a1a", "#b82929", "#d93b3b", "#f05050", "#ff6b6b", "#ff8f8f", "#ffe3e3"]
+      },
+      "info": {
+        "role": "secondary",
+        "displayName": "Sinyal Biru",
+        "canonical": "#60a5fa",
+        "tonalRamp": ["#0f2a4d", "#1c4379", "#2a5ea8", "#3a78d1", "#4f90e8", "#60a5fa", "#87bcfc", "#e3f0ff"]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Kertas Putih",
+        "canonical": "#fafafa",
+        "tonalRamp": ["#e8e8e8", "#efefef", "#f3f3f3", "#f6f6f6", "#f8f8f8", "#fafafa", "#fcfcfc", "#ffffff"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface Putih",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#e8e8e8", "#efefef", "#f3f3f3", "#f7f7f7", "#fafafa", "#fdfdfd", "#ffffff", "#ffffff"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta Pekat",
+        "canonical": "#171717",
+        "tonalRamp": ["#171717", "#2a2a2a", "#3d3d3d", "#525252", "#6b6b6b", "#8a8a8a", "#a8a8a8", "#c9c9c9"]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Tinta Pudar",
+        "canonical": "#767676",
+        "tonalRamp": ["#4a4a4a", "#5b5b5b", "#6a6a6a", "#767676", "#8a8a8a", "#9e9e9e", "#b3b3b3", "#c9c9c9"]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Garis Pensil",
+        "canonical": "#e5e7eb",
+        "tonalRamp": ["#c9cdd4", "#d2d6dc", "#dae0e6", "#e5e7eb", "#eaecef", "#f0f2f4", "#f5f6f7", "#fafafa"]
+      },
+      "focus": {
+        "role": "primary",
+        "displayName": "Focus Ring",
+        "canonical": "rgba(255, 206, 84, 0.5)",
+        "tonalRamp": ["rgba(255,206,84,0.1)", "rgba(255,206,84,0.2)", "rgba(255,206,84,0.3)", "rgba(255,206,84,0.4)", "rgba(255,206,84,0.5)", "rgba(255,206,84,0.6)", "rgba(255,206,84,0.7)", "rgba(255,206,84,0.8)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "H1 hero landing saja; 700, tracking tight." },
+      "headline": { "displayName": "Headline", "purpose": "Judul section dan halaman; 700, 1.5rem." },
+      "title": { "displayName": "Title", "purpose": "Judul kartu, nama entitas, tombol; 600, 0.875rem." },
+      "body": { "displayName": "Body", "purpose": "Teks utama dan deskripsi; 400, 0.875rem, lh 1.6." },
+      "label": { "displayName": "Label", "purpose": "Keterangan kecil, timestamp, chip; 500, 0.75rem." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "state-transition", "value": "background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease", "purpose": "Transisi state (hover/focus/disabled) pada tombol dan nav." },
+      { "name": "chevron-rotate", "value": "transform 0.2s ease", "purpose": "Rotasi chevron FAQ saat <details> terbuka." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Satu-satunya aksi utama per layar; kuning Beacon Light dengan tinta pekat.",
+      "html": "<button class=\"ds-btn-primary\">Buat dashboard semester</button>",
+      "css": ".ds-btn-primary { background: #ffce54; color: #171717; font-family: Geist, sans-serif; font-size: 14px; font-weight: 600; line-height: 1; padding: 14px 16px; min-height: 44px; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s ease, opacity 0.2s ease; } .ds-btn-primary:hover { background: #ffd365; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255, 206, 84, 0.5); } .ds-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Aksi sekunder: border Garis Pensil di atas surface, hover jadi canvas.",
+      "html": "<button class=\"ds-btn-secondary\">Masuk</button>",
+      "css": ".ds-btn-secondary { background: #ffffff; color: #171717; font-family: Geist, sans-serif; font-size: 14px; font-weight: 500; padding: 12px 16px; min-height: 44px; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease; } .ds-btn-secondary:hover { background: #fafafa; } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255, 206, 84, 0.5); }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Aksi destruktif: outline Sinyal Merah, teks merah.",
+      "html": "<button class=\"ds-btn-danger\">Hapus akun</button>",
+      "css": ".ds-btn-danger { background: #ffffff; color: #ff6b6b; font-family: Geist, sans-serif; font-size: 14px; font-weight: 600; padding: 12px 16px; min-height: 44px; border: 1px solid #ff6b6b; border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease; } .ds-btn-danger:hover { background: rgba(255, 107, 107, 0.1); } .ds-btn-danger:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255, 206, 84, 0.5); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Field masukan: Kertas Putih di atas canvas, radius 4px, focus ring kuning.",
+      "html": "<label class=\"ds-field\"><span>Nama mata kuliah</span><input class=\"ds-input\" type=\"text\" placeholder=\"Konsep Sistem Informasi\" /></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 4px; font-family: Geist, sans-serif; font-size: 14px; font-weight: 500; color: #171717; } .ds-input { background: #fafafa; color: #171717; font-family: Geist, sans-serif; font-size: 14px; height: 40px; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 4px; transition: box-shadow 0.2s ease, border-color 0.2s ease; } .ds-input::placeholder { color: #767676; } .ds-input:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255, 206, 84, 0.5); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Wadah konten: surface di atas canvas, radius 12px, border 1px, tanpa shadow.",
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-title\">Semester Gasal 2026/27</p><p class=\"ds-card-body\">3 mata kuliah aktif, 2 deadline minggu ini.</p></div>",
+      "css": ".ds-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; font-family: Geist, sans-serif; } .ds-card-title { font-size: 14px; font-weight: 600; color: #171717; margin: 0 0 4px; } .ds-card-body { font-size: 14px; line-height: 1.6; color: #767676; margin: 0; }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "chip-success",
+      "description": "Badge status: teks tinta pekat di atas tint sinyal; selalu ada teks, tidak warna saja.",
+      "html": "<span class=\"ds-chip ds-chip-success\">Aktif</span><span class=\"ds-chip ds-chip-danger\">Overdue</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 8px; font-family: Geist, sans-serif; font-size: 12px; font-weight: 500; color: #171717; margin-right: 6px; } .ds-chip-success { background: rgba(203, 226, 115, 0.2); } .ds-chip-danger { background: rgba(255, 107, 107, 0.1); border: 1px solid rgba(255, 107, 107, 0.4); }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Item navigasi sidebar: pasif muted, hover canvas, aktif Beacon Light 20%.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item\">Dashboard</a><a class=\"ds-nav-item ds-nav-active\">Kalender</a></nav>",
+      "css": ".ds-nav { display: flex; flex-direction: column; gap: 4px; font-family: Geist, sans-serif; font-size: 14px; } .ds-nav-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; color: #767676; text-decoration: none; min-height: 40px; transition: background-color 0.2s ease, color 0.2s ease; } .ds-nav-item:hover { background: #fafafa; color: #171717; } .ds-nav-active { background: rgba(255, 206, 84, 0.2); color: #171717; font-weight: 500; } .ds-nav-item:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255, 206, 84, 0.5); }"
+    },
+    {
+      "name": "Progress Bar",
+      "kind": "custom",
+      "refersTo": "progress",
+      "description": "Signature: track Kertas Putih, fill Beacon Light; metafora beacon menuju pemenuhan.",
+      "html": "<div class=\"ds-progress\"><div class=\"ds-progress-fill\" style=\"width: 45%\"></div></div>",
+      "css": ".ds-progress { height: 8px; background: #fafafa; border-radius: 999px; overflow: hidden; } .ds-progress-fill { height: 100%; background: #ffce54; border-radius: 999px; }"
+    },
+    {
+      "name": "Toolbar Button",
+      "kind": "button",
+      "refersTo": "button-toolbar",
+      "description": "Tombol editor rich text: 44x44px, pasif muted, aktif Beacon Light 20%.",
+      "html": "<button class=\"ds-toolbar-btn\" aria-pressed=\"true\">B</button>",
+      "css": ".ds-toolbar-btn { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 4px; background: transparent; color: #767676; font-family: Geist, sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; } .ds-toolbar-btn:hover { color: #171717; } .ds-toolbar-btn[aria-pressed=\"true\"] { background: rgba(255, 206, 84, 0.2); color: #171717; } .ds-toolbar-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255, 206, 84, 0.5); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Deadline Beacon",
+    "overview": "Sakustudi adalah meja belajar yang tenang dengan satu mercusuar kuning di tengahnya. Permukaan datar dan netral (kertas putih, tinta pekat, garis pensil) membentuk ruang kerja yang jujur dan tidak berteriak — semua informasi akademik tersusun dengan presisi alat tulis. Kuning sinyal (#ffce54) adalah satu-satunya warna yang \"menyala\": tombol utama, indikator aktif, dan titik kecil di navigasi. Kuning muncul jarang, dan justru karena langka, mata tertuju ke sana saat hal itu benar-benar penting — seperti beacon yang menyala menjelang deadline.\n\nSistem ini flat secara disiplin: tidak ada shadow, tidak ada gradien. Kedalaman dibangun dari hierarki tonal (canvas vs surface) dan garis tipis (border). Radius mengikuti tangga peran: 4px untuk kontrol masukan, 8px untuk kontrol dan chip, 12px untuk kartu. Semua target sentuh minimal 44px karena pengguna utama bekerja dari HP. Dark mode adalah negatif yang setia: nilai-nilai yang sama, hanya dipindahkan ke malam hari.\n\nKepribadian visual sengaja menolak look template AI — tidak ada cream + serif editorial, tidak ada dark + acid accent, tidak ada layout broadsheet. Sistem ini adalah produk perangkat lunak yang tenang: Geist di mana-mana, satu aksen, tanpa dekorasi yang tidak bekerja.",
+    "keyCharacteristics": [
+      "Flat by default; kedalaman dari tonal layering + border, bukan shadow.",
+      "Satu aksen kuning sinyal yang langka dan selalu bermakna.",
+      "Radius ladder peran: 4 / 8 / 12px, tidak pernah acak.",
+      "Tipografi satu keluarga (Geist), hierarki via weight & size.",
+      "Mobile-first: target sentuh 44px, kontrol utama di jangkauan ibu jari."
+    ],
+    "rules": [
+      { "name": "The Signal Rule", "body": "Beacon Light muncul di ≤10% luas layar mana pun. Kuning yang langka adalah sinyal; kuning yang sering jadi wallpaper.", "section": "colors" },
+      { "name": "The Status-Not-Just-Color Rule", "body": "Status tidak pernah disampaikan warna saja — selalu ada teks atau ikon pendamping.", "section": "colors" },
+      { "name": "The Geist-Only Rule", "body": "Semua teks UI memakai Geist (atau Geist Mono). Font baru hanya lewat keputusan eksplisit.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Sistem ini flat: tanpa box-shadow pada kartu, input, atau nav. Kedalaman hanya dari tonal layering dan garis.", "section": "elevation" },
+      { "name": "The Radius Ladder Rule", "body": "Radius mengikuti peran elemen: 4 input, 8 control, 12 card. Radius yang sama di tempat berbeda adalah bug visual.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do gunakan Beacon Light untuk satu hal penting per layar: tombol utama, titik aktif, progress fill.",
+      "Do bangun kedalaman dari surface-vs-canvas + border; sistem ini tidak pernah memakai shadow.",
+      "Do ikuti tangga radius peran: 4 input, 8 control, 12 card.",
+      "Do beri setiap elemen interaktif focus-visible ring kuning.",
+      "Do jaga target sentuh ≥44px pada kontrol mobile.",
+      "Do sampaikan status dengan teks, bukan warna saja."
+    ],
+    "donts": [
+      "Don't gunakan gradien, glow, atau bayangan besar — itu look template SaaS yang ditolak.",
+      "Don't menambah font keluarga baru (The Geist-Only Rule).",
+      "Don't memakai kuning untuk dekorasi pasif (The Signal Rule).",
+      "Don't memakai radius 12px untuk input atau 4px untuk kartu (The Radius Ladder Rule).",
+      "Don't menyalin template AI look: cream+serif, dark+acid, atau broadsheet."
+    ]
+  }
+}
