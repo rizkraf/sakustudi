@@ -1,3 +1,5 @@
+import { Alarm, Calendar, DashboardSpeed, DownloadSquare, LockSquare, Notes } from "iconoir-react";
+
 import type { Route } from "./+types/home";
 
 /**
@@ -45,26 +47,32 @@ const FEATURES = [
   {
     title: "Dashboard semester",
     body: "Semua mata kuliah, tugas, dan diskusi semester ini dalam satu pandangan.",
+    icon: DashboardSpeed,
   },
   {
     title: "Pengingat deadline",
     body: "Notifikasi otomatis 3 hari dan 1 hari sebelum deadline, di aplikasi dan email.",
+    icon: Alarm,
   },
   {
     title: "Catatan rich text",
     body: "Catat materi per mata kuliah dengan editor WYSIWYG, lengkap dengan pencarian.",
+    icon: Notes,
   },
   {
     title: "File privat",
     body: "Upload PDF, gambar, dan dokumen — hanya kamu yang bisa mengaksesnya.",
+    icon: LockSquare,
   },
   {
     title: "Kalender akademik",
     body: "Deadline dan jadwal kuliah terlihat per hari, per minggu.",
+    icon: Calendar,
   },
   {
     title: "Ekspor & hapus data",
     body: "Unduh semua data kapan saja, atau hapus akun beserta datanya.",
+    icon: DownloadSquare,
   },
 ] as const;
 
@@ -225,7 +233,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((feature) => (
             <article key={feature.title} className="rounded-card border border-border bg-surface p-5">
-              <h3 className="text-sm font-semibold">{feature.title}</h3>
+              <div className="flex size-10 items-center justify-center rounded-control bg-primary/15">
+                <feature.icon className="size-[22px] text-ink" />
+              </div>
+              <h3 className="mt-3 text-sm font-semibold">{feature.title}</h3>
               <p className="mt-2 text-sm text-muted">{feature.body}</p>
             </article>
           ))}

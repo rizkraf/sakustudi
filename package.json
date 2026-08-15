@@ -37,6 +37,7 @@
     "date-fns-tz": "^3.2.0",
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
+    "iconoir-react": "^7.12.1",
     "ioredis": "^6.0.0",
     "isbot": "^5.1.36",
     "morgan": "^1.10.1",
