@@ -124,13 +124,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <nav className="flex items-center gap-3 text-sm" aria-label="Account">
             <a
               href="/login"
-              className="rounded-control border border-border bg-surface px-4 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              className="inline-flex min-h-11 items-center rounded-control border border-border bg-surface px-4 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
               Masuk
             </a>
             <a
               href="/register"
-              className="rounded-control bg-primary px-4 py-2 font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              className="inline-flex min-h-11 items-center rounded-control bg-primary px-4 py-2 font-semibold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
               Daftar
             </a>
@@ -264,8 +264,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <div className="mt-8 space-y-3">
             {FAQS.map((faq) => (
               <details key={faq.question} className="group rounded-card border border-border bg-canvas">
-                <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
-                  {faq.question}
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+                  <span>{faq.question}</span>
+                  <span aria-hidden="true" className="text-muted transition-transform duration-200 group-open:rotate-180">
+                    ▾
+                  </span>
                 </summary>
                 <p className="px-5 pb-4 text-sm text-muted">{faq.answer}</p>
               </details>
