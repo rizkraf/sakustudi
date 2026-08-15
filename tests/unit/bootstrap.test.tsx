@@ -18,7 +18,7 @@ describe("bootstrap", () => {
 
     expect(
       screen.getByRole("heading", { level: 1 }),
-    ).toHaveTextContent("Semester kamu, jelas dalam satu tempat");
+    ).toHaveTextContent("Semua deadline kuliahmu, jelas dalam satu tempat");
     expect(
       screen.getByRole("link", { name: "Daftar" }),
     ).toHaveAttribute("href", "/register");
